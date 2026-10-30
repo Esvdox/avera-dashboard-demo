@@ -1,0 +1,46 @@
+/* Primitive → semantic → component tokens. See DESIGN.md. */
+:root {
+  --petrol-800:#164b4c; --petrol-700:#1b6261; --petrol-600:#257a76;
+  --sage-500:#7da494; --copper-600:#a76d52; --rose-700:#b54155;
+  --neutral-0:#fff; --neutral-25:#f8faf9; --neutral-100:#f0f3f2;
+  --neutral-200:#dfe5e2; --neutral-500:#76837e; --neutral-700:#42534c; --neutral-900:#1e3029;
+  --font-ui:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --text-xs:11px; --text-sm:12px; --text-base:14px; --text-heading:15px; --text-value:19px; --text-page:24px;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px;
+  --radius-input:12px; --radius-card:16px; --radius-hero:22px;
+  --icon-small:16px; --icon-default:18px; --icon-nav:20px; --icon-tile:28px;
+  --color-background:var(--neutral-25); --color-surface:var(--neutral-0); --color-text:var(--neutral-900);
+  --color-secondary-text:#69766f; --color-border:var(--neutral-200);
+  --color-primary:var(--petrol-700); --color-primary-soft:#eaf3ef; --color-primary-text:#fff;
+  --color-positive:#237359; --color-danger:var(--rose-700); --color-warning:#8b6245;
+  --color-warning-soft:#f6eee6; --color-positive-soft:#eaf4ed;
+  --color-chart-compare:var(--copper-600); --color-chart-profit:var(--sage-500);
+  --sidebar-background:#173d3c; --sidebar-text:#e5efea; --sidebar-muted:#b0c6bd;
+  --card-background:var(--color-surface); --card-border:var(--color-border);
+  --card-padding:var(--space-4); --card-radius:var(--radius-card);
+  --card-shadow:0 1px 3px rgb(25 51 40 / 5%);
+  --button-background:var(--color-primary); --button-text:var(--color-primary-text);
+  --input-background:var(--color-background); --input-border:var(--color-border);
+  --chart-fill:color-mix(in srgb,var(--color-primary) 9%,transparent);
+  /* Compatibility aliases shared by the existing functional renderers. */
+  --bg:var(--color-background); --surface:var(--color-surface); --text:var(--color-text);
+  --muted:var(--color-secondary-text); --line:var(--color-border); --accent:var(--color-primary);
+  --tint:var(--color-primary-soft); --good:var(--color-positive); --danger:var(--color-danger);
+  --warn:var(--color-warning); --warning-bg:var(--color-warning-soft); --good-bg:var(--color-positive-soft);
+  --shadow:var(--card-shadow); --grid:var(--color-border);
+}
+body.dark {
+  --color-background:#122421; --color-surface:#1a302a; --color-text:#e9f1eb;
+  --color-secondary-text:#a9bab0; --color-border:#344b40;
+  --color-primary:#9bcbb7; --color-primary-soft:#27473a; --color-primary-text:#142d22;
+  --color-positive:#95cfaa; --color-danger:#ef9cac; --color-warning:#d5b38c;
+  --color-warning-soft:#42382b; --color-positive-soft:#294434;
+  --color-chart-compare:#d3a387; --color-chart-profit:#8daf9a;
+  --sidebar-background:#112d27; --sidebar-text:#e5efea; --sidebar-muted:#a5c0b0;
+  --card-shadow:0 1px 3px rgb(0 0 0 / 10%);
+  --bg:var(--color-background); --surface:var(--color-surface); --text:var(--color-text);
+  --muted:var(--color-secondary-text); --line:var(--color-border); --accent:var(--color-primary);
+  --tint:var(--color-primary-soft); --good:var(--color-positive); --danger:var(--color-danger);
+  --warn:var(--color-warning); --warning-bg:var(--color-warning-soft); --good-bg:var(--color-positive-soft);
+  --grid:var(--color-border);
+}

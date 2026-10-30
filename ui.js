@@ -1,0 +1,4 @@
+'use strict';
+window.avIcon=name=>'<svg class="av-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#av-i-'+name+'"></use></svg>';
+window.avNavIcons={overview:'grid',finance:'wallet',products:'products',sales:'sales',production:'factory',people:'people'};
+document.addEventListener('DOMContentLoaded',()=>{const menu=document.getElementById('av-menu'),open=document.getElementById('av-open-menu'),close=document.getElementById('av-close-menu');open.addEventListener('click',()=>{menu.showModal();open.setAttribute('aria-expanded','true');});close.addEventListener('click',()=>menu.close());menu.addEventListener('close',()=>{open.setAttribute('aria-expanded','false');});menu.addEventListener('click',e=>{if(e.target.closest('a[href^="#"]')){menu.close();}else if(e.target===menu){const r=menu.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)menu.close();}});});
