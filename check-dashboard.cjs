@@ -1,11 +1,11 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const {pathToFileURL}=require('url');const path=require('path');const assert=require('assert/strict');
 (async()=>{const browser=await chromium.launch({headless:true});try{for(const width of [390,1280]){const page=await browser.newPage({viewport:{width,height:950}});const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(process.env.AVERA_URL||pathToFileURL(path.join(__dirname,'index.html')).href);await page.getByRole('heading',{name:'Компания за минуту',exact:true}).waitFor();
-const before=await page.evaluate(()=>getComputedStyle(document.body).backgroundColor);
+const initialPath=new URL(page.url()).pathname;const before=await page.evaluate(()=>getComputedStyle(document.body).backgroundColor);
 await page.getByRole('navigation').getByRole('link',{name:'Финансы',exact:true}).click();
 assert.match(await page.locator('body').innerText(),/42[,.]0? млн ₽|42 млн ₽/,'Finance must show the same revenue as the overview');
 assert.equal(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor),before,'Navigation must preserve the theme');
-assert.match(await page.locator('body').innerText(),/4,6 млн ₽/,'Profit must match the overview');assert.match(await page.locator('body').innerText(),/-1,8 млн ₽|−1,8 млн ₽/,'Cash minimum must match the overview');assert.equal(path.basename(new URL(page.url()).pathname),'index.html','Sections stay in one application');
+assert.match(await page.locator('body').innerText(),/4,6 млн ₽/,'Profit must match the overview');assert.match(await page.locator('body').innerText(),/-1,8 млн ₽|−1,8 млн ₽/,'Cash minimum must match the overview');assert.equal(new URL(page.url()).pathname,initialPath,'Sections stay in one application');
 await page.getByRole('navigation').getByRole('link',{name:'Обзор компании',exact:true}).click();await page.getByRole('heading',{name:'Компания за минуту',exact:true}).waitFor();
 for(const [label,hash]of [['Продукты и КБ','products'],['Продажи','sales'],['Производство','production'],['Люди и ФОТ','people']]){await page.getByRole('navigation').getByRole('link',{name:label,exact:true}).click();assert.equal(new URL(page.url()).hash,'#'+hash);assert.equal(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor),before);await page.getByRole('navigation').getByRole('link',{name:'Обзор компании',exact:true}).click();await page.getByRole('heading',{name:'Компания за минуту',exact:true}).waitFor();}
 await page.reload();await page.getByRole('heading',{name:'Компания за минуту',exact:true}).waitFor();
