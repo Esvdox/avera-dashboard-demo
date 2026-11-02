@@ -1,0 +1,32 @@
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {pathToFileURL}=require('url');
+const path=require('path');
+const assert=require('assert/strict');
+(async()=>{const browser=await chromium.launch({headless:true});try{
+for(const width of [320,390,1280]){
+const page=await browser.newPage({viewport:{width,height:950}});const errors=[];
+page.on('pageerror',e=>errors.push(e.message));
+await page.goto(pathToFileURL(path.join(__dirname,'index.html')).href+'#assets');
+await page.getByRole('heading',{name:'Основные средства',exact:true,level:1}).waitFor({timeout:5000});
+assert.equal(await page.locator('#asset-register tbody tr').count(),96);
+const data=await page.evaluate(()=>window.AVERA_FIXED_ASSETS);
+assert.equal(data.totals.cost,15520844865);assert.equal(data.totals.depreciation,3239155801);assert.equal(data.totals.residual,12281689064);
+for(const key of ['cost','depreciation','residual'])assert.equal(data.items.reduce((n,r)=>n+(r[key]||0),0),data.totals[key]);
+assert.match(await page.locator('main > .notice').innerText(),/Фактическ/);
+assert.match(await page.locator('#content').innerText(),/Накопленная амортизация/);
+await page.locator('#asset-search').fill('ОС-Л-057');assert.equal(await page.locator('#asset-register tbody tr').count(),3);
+await page.locator('#asset-search').fill('нет такого объекта');assert.match(await page.locator('#asset-register').innerText(),/ничего не найдено/);
+await page.locator('#asset-search').fill('');await page.locator('#asset-status').selectOption('fully');assert.equal(await page.locator('#asset-register tbody tr').count(),11);
+await page.locator('#asset-status').selectOption('duplicates');assert.equal(await page.locator('#asset-register tbody tr').count(),5);
+await page.locator('#asset-status').selectOption('all');
+assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+await page.getByRole('button',{name:'Включить тёмную тему',exact:true}).click();await page.reload();
+assert.equal(await page.locator('body').evaluate(e=>e.classList.contains('dark')),true);
+await page.getByRole('heading',{name:'Основные средства',exact:true,level:1}).waitFor();
+await page.screenshot({path:path.join(__dirname,`qa-assets-${width}.png`),fullPage:true});
+await page.goto(pathToFileURL(path.join(__dirname,'index.html')).href+'#finance');
+await page.getByRole('link',{name:'Открыть основные средства',exact:true}).click();
+await page.getByRole('heading',{name:'Основные средства',exact:true,level:1}).waitFor();
+await page.goBack();await page.getByRole('heading',{name:'Финансы: бухгалтерская отчетность',exact:true}).waitFor();
+assert.deepEqual(errors,[]);console.log(`PASS assets source totals, search, filters, theme, history and layout ${width}px`);await page.close();
+}}finally{await browser.close();}})().catch(e=>{console.error(e);process.exit(1)});
