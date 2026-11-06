@@ -3,7 +3,7 @@
 tabs.splice(1, 0, ['comparison', 'Сравнение', 'Сравнение', '']);
 window.avNavIcons.comparison = 'trend';
 
-let comparisonView = 'table';
+let comparisonView = new URLSearchParams(location.search).get('view') === 'charts' ? 'chart' : 'table';
 let comparisonChartView = 'periods';
 
 function comparisonData() {
@@ -56,31 +56,36 @@ function comparisonGraph(metric, todayDate) {
 
 function periodGraph(metric, index) {
   const periods = [
-    {letter: 'А', point: metric.points.at(-1), className: 'cmp-series-a', x: 241},
-    {letter: 'Б', point: metric.points.length > 1 ? metric.points.at(-2) : null, className: 'cmp-series-b', x: 120}
+    {letter: 'А', point: metric.points.at(-1), className: 'cmp-series-a', x: 320},
+    {letter: 'Б', point: metric.points.length > 1 ? metric.points.at(-2) : null, className: 'cmp-series-b', x: 56}
   ].filter(series => Number.isFinite(series.point?.value));
   const maximum = Math.max(1, ...periods.map(series => series.point.value));
   const stepSize = 10 ** Math.floor(Math.log10(maximum / 3));
   const step = Math.ceil(maximum / (3 * stepSize)) * stepSize;
-  const y = value => 163 - (value / (step * 4)) * 136;
+  const bottom = 176;
+  const y = value => bottom - (value / (step * 4)) * 156;
   const grid = [0, 1, 2, 3, 4].map(tick => {
     const value = tick * step;
-    return `<path d="M39 ${y(value)}H307"/><text x="32" y="${y(value) + 3}" text-anchor="end">${fmt(value)}</text>`;
+    return `<path d="M56 ${y(value)}H320"/><text x="49" y="${y(value) + 3}" text-anchor="end">${fmt(value)}</text>`;
   }).join('');
   const ordered = [...periods].reverse();
   const coordinates = ordered.map(series => [series.x, y(series.point.value)]);
   const comparisonLine = coordinates.map(pair => pair.join(',')).join(' ');
   const first = coordinates[0];
   const last = coordinates.at(-1);
+  const fillId = `cmp-period-fill-${index}`;
   const trace = coordinates.length > 1
-    ? `<polygon class="cmp-period-fill" points="${first[0]},163 ${comparisonLine} ${last[0]},163"/>
+    ? `<defs><linearGradient id="${fillId}" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="${Math.min(first[1], last[1])}" y2="${bottom}">
+         <stop offset="0" stop-color="var(--accent)" stop-opacity=".34"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/>
+       </linearGradient></defs>
+       <polygon class="cmp-period-fill" fill="url(#${fillId})" points="${first[0]},${bottom} ${comparisonLine} ${last[0]},${bottom}"/>
        <polyline class="cmp-period-trace" points="${comparisonLine}"/>`
     : '';
   const marks = periods.map(series => {
     const py = y(series.point.value);
     const x = series.x;
-    return `<g class="${series.className}"><circle cx="${x}" cy="${py}" r="4"/><text x="${x}" y="${py - 9}" text-anchor="middle">${fmt(series.point.value)}</text>
-      <text x="${x}" y="181" text-anchor="middle">${series.letter}</text></g>`;
+    return `<g class="${series.className}"><circle cx="${x}" cy="${py}" r="3"/><text x="${x}" y="${py - 9}" text-anchor="middle">${fmt(series.point.value)}</text>
+      <text class="cmp-axis-date" x="${x}" y="194" text-anchor="middle">${series.point.date.slice(0, 4)}</text></g>`;
   }).join('');
   const label = date => {
     const year = date.slice(0, 4);
@@ -88,11 +93,11 @@ function periodGraph(metric, index) {
     if (index === 1) return year + ' год';
     return date.split('-').reverse().join('.');
   };
-  const legend = periods.map(series => `<li class="${series.className}"><i aria-hidden="true"></i>Период ${series.letter} · ${label(series.point.date)}</li>`).join('');
+  const legend = ordered.map(series => `<li class="${series.className}"><i aria-hidden="true"></i>Период ${series.letter} · ${label(series.point.date)}</li>`).join('');
   const accessible = periods.map(series => `Период ${series.letter}, ${label(series.point.date)}, ${fmt(series.point.value)}`).join('. ');
   return periods.length
-    ? `<svg class="cmp-period-graph" viewBox="0 0 320 188" role="img" aria-label="${safe(metric.name + ', ' + metric.unit + '. ' + accessible)}">
-        <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M39 27V163H307"/>${trace}${marks}
+    ? `<svg class="cmp-period-graph" viewBox="0 0 346 202" role="img" aria-label="${safe(metric.name + ', ' + metric.unit + '. ' + accessible)}">
+        <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M56 20V176H320"/>${trace}${marks}
       </svg><ul class="cmp-series-legend">${legend}</ul>`
     : '<div class="cmp-period-empty">НД</div>';
 }
