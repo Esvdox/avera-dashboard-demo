@@ -106,7 +106,9 @@ function periodGraph(metric, index) {
     ? `<path class="cmp-start-baseline" d="M56 ${y(metric.startBaseline)}H320"/><text class="cmp-axis-date" x="56" y="194" text-anchor="middle">Старт</text>`
     : '';
   const seriesLabel = series => series.point.label || 'Период ' + series.letter;
-  const legend = startLegend + ordered.map(series => `<li class="${series.className}"><i aria-hidden="true"></i>${seriesLabel(series)} · ${label(series.point.date)}</li>`).join('');
+  const legend = startLegend + (ordered.length === 2
+    ? `<li class="cmp-series-a cmp-series-range"><i aria-hidden="true"></i>Период · ${label(ordered[0].point.date)} → ${label(ordered[1].point.date)}</li>`
+    : ordered.map(series => `<li class="${series.className}"><i aria-hidden="true"></i>${seriesLabel(series)} · ${label(series.point.date)}</li>`).join(''));
   const accessible = periods.map(series => `${seriesLabel(series)}, ${label(series.point.date)}, ${fmt(series.point.value)}`).join('. ');
   return periods.length
     ? `<svg class="cmp-period-graph" viewBox="0 0 346 202" role="img" aria-label="${safe(metric.name + ', ' + metric.unit + '. ' + accessible)}">

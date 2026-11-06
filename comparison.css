@@ -52,6 +52,7 @@
 #avera-owner .cmp-series-legend li{display:flex;align-items:center;gap:6px}
 #avera-owner .cmp-series-legend i{width:14px;border-top:2px solid currentColor}
 #avera-owner .cmp-series-legend .cmp-series-b i{border-top-style:dashed}
+#avera-owner .cmp-series-legend .cmp-series-range i{border-top-style:dashed}
 #avera-owner .cmp-period-empty{display:grid;place-items:center;min-height:102px;color:var(--muted)}
 
 @supports (grid-template-rows:subgrid){
