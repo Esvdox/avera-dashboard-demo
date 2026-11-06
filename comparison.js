@@ -4,7 +4,6 @@ tabs.splice(1, 0, ['comparison', 'Сравнение', 'Сравнение', '']
 window.avNavIcons.comparison = 'trend';
 
 let comparisonView = new URLSearchParams(location.search).get('view') === 'charts' ? 'chart' : 'table';
-let comparisonChartView = 'periods';
 const comparisonDates = {from: '2025-09-30', to: '2026-09-30'};
 
 function comparisonData() {
@@ -26,36 +25,6 @@ function comparisonData() {
     {name: 'Сделки', unit: 'шт.', points: []},
     {name: 'Маржа сделок', unit: '%', points: []}
   ];
-}
-
-function comparisonGraph(metric, todayDate) {
-  const points = metric.points.filter(point => Number.isFinite(point.value));
-  const start = Date.parse('2024-01-01');
-  const arrival = Date.parse('2026-11-01');
-  const today = Date.parse(todayDate);
-  const end = Math.max(today, arrival);
-  const x = date => 10 + (date - start) / (end - start) * 300;
-  const maximum = Math.max(1, metric.startBaseline ?? 0, ...points.map(point => point.value));
-  const y = value => 87 - value / maximum * 59;
-  const locations = points.map(point => [x(Date.parse(point.date)), y(point.value)]);
-  const labels = points.map((point, index) => {
-    const [px, py] = locations[index];
-    return `<circle cx="${px}" cy="${py}" r="3.5" fill="var(--accent)"><title>${point.date} · ${fmt(point.value)}</title></circle>
-      <text x="${px}" y="${py - 7}" text-anchor="middle" fill="var(--text)">${fmt(point.value)}</text>`;
-  }).join('');
-  const trace = locations.length > 1 ? `<polyline points="${locations.map(pair => pair.join(',')).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/>` : '';
-  const baseline = Number.isFinite(metric.startBaseline)
-    ? `<path class="cmp-start-baseline" d="M10 ${y(metric.startBaseline)}H310"/><text x="12" y="${y(metric.startBaseline) - 7}" fill="currentColor">Старт · ${fmt(metric.startBaseline)} SKU</text>`
-    : '';
-  const accessibleData = points.map(point => point.date + ' — ' + fmt(point.value)).join('. ');
-  return `<svg class="cmp-graph" viewBox="0 0 320 102" role="img" aria-label="${safe(metric.name + ', ' + metric.unit + '. ' + (accessibleData || 'НД'))}">
-    <path d="M10 30H310 M10 58H310 M10 87H310" stroke="var(--line)" fill="none"/>
-    <line x1="${x(arrival)}" x2="${x(arrival)}" y1="12" y2="87" stroke="var(--accent)" stroke-width="2"/>
-    <line x1="${x(today)}" x2="${x(today)}" y1="12" y2="87" stroke="currentColor" stroke-dasharray="3 3"/>
-    ${baseline}${trace}${labels}${points.length ? '' : '<text x="160" y="55" text-anchor="middle" fill="currentColor">НД</text>'}
-    <text x="10" y="100" fill="currentColor">2024</text>
-    <text x="310" y="100" fill="currentColor" text-anchor="end">${todayDate.slice(0, 4)}</text>
-  </svg>`;
 }
 
 function periodGraph(metric, index) {
@@ -161,20 +130,19 @@ function comparisonTiles(metric) {
 }
 
 function renderComparison() {
-  const today = new Intl.DateTimeFormat('sv-SE', {timeZone: 'Europe/Moscow', year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date());
   const chart = comparisonView === 'chart';
   const switcher = `<div class="cmp-switch" role="group" aria-label="Вид сравнения">
     <button type="button" data-comparison-view="table" aria-pressed="${!chart}">Было / стало</button>
     <button type="button" data-comparison-view="chart" aria-pressed="${chart}">Графики</button></div>`;
-  const periodView = chart && comparisonChartView === 'periods';
-  const chartSwitcher = chart ? `<div class="cmp-switch cmp-chart-switch" role="group" aria-label="Вид графиков">
-    <button type="button" data-chart-view="periods" aria-pressed="${periodView}">Периоды</button>
-    <button type="button" data-chart-view="timeline" aria-pressed="${!periodView}">Хронология</button></div>` : '';
-  const legend = chart && !periodView ? `<div class="cmp-legend"><span><i></i>Приход · 01.11.26</span><span><i></i>Сегодня · ${today.split('-').reverse().join('.')}</span></div>` : '';
   const metrics = comparisonData();
-  const cards = (chart ? metrics : comparisonTableData(metrics)).map((metric, index) => `<section class="${chart ? 'panel cmp-card' : 'cmp-pair'}${periodView ? ' cmp-period-card' : ''}" aria-label="${safe(metric.name)}">${chart ? `<h2>${metric.name}, <span>${metric.unit}</span></h2>` : ''}
-    ${chart ? (periodView ? periodGraph(metric, index) : comparisonGraph(metric, today)) : comparisonTiles(metric)}</section>`).join('');
-  const datesValid = comparisonDates.from && comparisonDates.to && comparisonDates.from < comparisonDates.to;
+  const {from, to} = comparisonDates;
+  const datesValid = from && to && from < to;
+  const visibleMetrics = chart
+    ? metrics.map(metric => ({...metric, points: datesValid ? metric.points.filter(point => point.date >= from && point.date <= to) : []}))
+    : comparisonTableData(metrics);
+  const cards = visibleMetrics.map((metric, index) => `<section class="${chart ? 'panel cmp-card cmp-period-card' : 'cmp-pair'}" aria-label="${safe(metric.name)}">${chart ? `<h2>${metric.name}, <span>${metric.unit}</span></h2>` : ''}
+    ${chart ? periodGraph(metric, index) : comparisonTiles(metric)}</section>`).join('');
+
   const snapshotDates = [...new Set(metrics.flatMap(metric => metric.points.filter(point => Number.isFinite(point.value)).map(point => point.date)))].sort();
   const dateField = (key, label) => {
     const selected = comparisonDates[key];
@@ -193,13 +161,13 @@ function renderComparison() {
   const periodNote = !datesValid
     ? 'Укажите две даты. Дата «До» должна быть позже даты «От».'
     : 'НД — нет среза на выбранную дату.';
-  const context = chart ? legend : `${dates}<div class="cmp-context" role="status"><span>${periodNote}</span></div>`;
+  const context = `${dates}<div class="cmp-context" role="status"><span>${periodNote}</span></div>`;
   return '<section class="panel cmp-controls" aria-label="Настройки сравнения">' + switcher + context + '</section>'
-    + (chart ? '<h2 class="cmp-section-title">Динамика и сравнение показателей</h2>' + chartSwitcher : '')
+    + (chart ? '<h2 class="cmp-section-title">Динамика и сравнение показателей</h2>' : '')
     + (chart ? '' : '<div class="cmp-column-head"><span>База</span><span>Сейчас</span></div>')
     + '<div class="cmp-list">' + cards + '</div>'
     + `<details class="panel cmp-details"><summary>Источники и методика</summary>
-      <p>Выручка на графиках — январь–сентябрь, ОФР. Текучесть — годовые данные 1С. Срез SKU аттракционов — 02.11.2026. Шкала начинается с 2024 года, первого года доступной отчётности. НД — нет данных.</p>
+      <p>Выручка на графиках — январь–сентябрь, ОФР. Текучесть — годовые данные 1С. Срез SKU аттракционов — 02.11.2026. Графики показывают срезы между датами «От» и «До». НД — нет данных.</p>
       <p>Сделки считаются по дате подписания. Маржа — сумма маржи / сумма выручки без НДС. Плановая и фактическая маржа учитываются отдельно.</p></details>
       <details class="panel cmp-details"><summary>Решения и результат</summary>
       <p>Дата решения, ответственный, срок, показатель и подтверждённый эффект.</p>
@@ -217,13 +185,12 @@ $('#content').addEventListener('change', event => {
   $(`#${id}`).focus();
 });
 $('#content').addEventListener('click', event => {
-  const button = event.target.closest('[data-comparison-view], [data-chart-view]');
+  const button = event.target.closest('[data-comparison-view]');
   if (current !== 'comparison' || !button) return;
-  const {comparisonView: view, chartView} = button.dataset;
-  if (view) comparisonView = view;
-  if (chartView) comparisonChartView = chartView;
+  const {comparisonView: view} = button.dataset;
+  comparisonView = view;
   render();
-  $(view ? `[data-comparison-view="${view}"]` : `[data-chart-view="${chartView}"]`).focus();
+  $(`[data-comparison-view="${view}"]`).focus();
 });
 const applyComparisonLabels = window.applyActualLabels;
 window.applyActualLabels = function () {
