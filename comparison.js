@@ -180,11 +180,10 @@ function renderComparison() {
     const selected = comparisonDates[key];
     const options = snapshotDates.map(date => `<option value="${date}"${date === selected ? ' selected' : ''}>${date.split('-').reverse().join('.')}</option>`).join('');
     return `<div class="cmp-date-field">
-      <label for="cmp-date-${key}">${label}</label>
+      <label for="cmp-snapshot-${key}">${label}</label>
       <select id="cmp-snapshot-${key}" aria-label="Доступные срезы: ${label}">
         <option value="" disabled${snapshotDates.includes(selected) ? '' : ' selected'}>Выбрать срез</option>${options}
       </select>
-      <input id="cmp-date-${key}" type="date" value="${safe(selected)}">
     </div>`;
   };
   const dates = `<div class="cmp-dates">
@@ -211,8 +210,8 @@ renderers.comparison = renderComparison;
 $('#content').addEventListener('change', event => {
   if (current !== 'comparison') return;
   const {id, value} = event.target;
-  if (id === 'cmp-date-from' || id === 'cmp-snapshot-from') comparisonDates.from = value;
-  else if (id === 'cmp-date-to' || id === 'cmp-snapshot-to') comparisonDates.to = value;
+  if (id === 'cmp-snapshot-from') comparisonDates.from = value;
+  else if (id === 'cmp-snapshot-to') comparisonDates.to = value;
   else return;
   render();
   $(`#${id}`).focus();
