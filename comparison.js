@@ -22,7 +22,7 @@ function comparisonData() {
     {name: 'Выручка', unit: 'млн ₽', before: revenue[1].value, period: '9 мес. 2026', points: revenue},
     {name: 'Текучесть', unit: '%', before: turnover[1]?.value, period: '2025', points: turnover},
     {name: 'Аттракционы', unit: 'SKU', startBaseline: baseline.items.length, points: [{date: start, value: baseline.items.length}]},
-    {name: 'Прочие продукты', unit: 'SKU', points: []},
+    {name: 'Прочие продукты', unit: 'SKU', points: [{date: '2026-11-01', value: 0, label: 'Старт'}]},
     {name: 'Сделки', unit: 'шт.', points: []},
     {name: 'Маржа сделок', unit: '%', points: []}
   ];
@@ -105,8 +105,9 @@ function periodGraph(metric, index) {
   const baseline = startLegend
     ? `<path class="cmp-start-baseline" d="M56 ${y(metric.startBaseline)}H320"/><text class="cmp-axis-date" x="56" y="194" text-anchor="middle">Старт</text>`
     : '';
-  const legend = startLegend + ordered.map(series => `<li class="${series.className}"><i aria-hidden="true"></i>Период ${series.letter} · ${label(series.point.date)}</li>`).join('');
-  const accessible = periods.map(series => `Период ${series.letter}, ${label(series.point.date)}, ${fmt(series.point.value)}`).join('. ');
+  const seriesLabel = series => series.point.label || 'Период ' + series.letter;
+  const legend = startLegend + ordered.map(series => `<li class="${series.className}"><i aria-hidden="true"></i>${seriesLabel(series)} · ${label(series.point.date)}</li>`).join('');
+  const accessible = periods.map(series => `${seriesLabel(series)}, ${label(series.point.date)}, ${fmt(series.point.value)}`).join('. ');
   return periods.length
     ? `<svg class="cmp-period-graph" viewBox="0 0 346 202" role="img" aria-label="${safe(metric.name + ', ' + metric.unit + '. ' + accessible)}">
         <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M56 20V176H320"/>${baseline}${trace}${marks}
@@ -124,7 +125,7 @@ function comparisonTableData(metrics) {
     ...metrics.map((metric, index) => ({
       ...metric,
       direction: index === 1 ? 'lower' : index === 0 || index >= 4 ? 'higher' : null,
-      comparableSnapshots: index === 0 || index === 1,
+      comparableSnapshots: index <= 3,
       icon: ['wallet', 'people', 'products', 'products', 'sales', 'trend'][index],
       shortName: index === 3 ? 'Прочие SKU' : metric.name
     })),
