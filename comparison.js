@@ -102,6 +102,18 @@ function periodGraph(metric, index) {
     : '<div class="cmp-period-empty">НД</div>';
 }
 
+function comparisonTiles(metric) {
+  const comparable = metric.comparable && Number.isFinite(metric.before) && Number.isFinite(metric.current) && metric.before !== 0;
+  const change = comparable ? (metric.current - metric.before) / Math.abs(metric.before) * 100 : null;
+  const tile = (label, value, note) => `<div class="panel cmp-tile"><dt>${label}</dt>
+    <dd>${Number.isFinite(value) ? fmt(value) : 'НД'}</dd>
+    <dd class="cmp-period">${note}</dd></div>`;
+  return `<dl class="cmp-values">
+    ${tile('Было', metric.before, metric.period || '')}
+    ${tile('Стало', metric.current, change === null ? '' : (change > 0 ? '+' : '') + fmt(change) + '%')}
+  </dl>`;
+}
+
 function renderComparison() {
   const today = new Intl.DateTimeFormat('sv-SE', {timeZone: 'Europe/Moscow', year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date());
   const chart = comparisonView === 'chart';
@@ -113,11 +125,8 @@ function renderComparison() {
     <button type="button" data-chart-view="periods" aria-pressed="${periodView}">Периоды</button>
     <button type="button" data-chart-view="timeline" aria-pressed="${!periodView}">Хронология</button></div>` : '';
   const legend = chart && !periodView ? `<div class="cmp-legend"><span><i></i>Приход · 01.11.26</span><span><i></i>Сегодня · ${today.split('-').reverse().join('.')}</span></div>` : '';
-  const cards = comparisonData().map((metric, index) => `<section class="panel cmp-card${periodView ? ' cmp-period-card' : ''}"><h2>${metric.name}, <span>${metric.unit}</span></h2>
-    ${chart ? (periodView ? periodGraph(metric, index) : comparisonGraph(metric, today)) : `<dl class="cmp-values">
-      <div><dt>Исходный</dt><dd>${Number.isFinite(metric.before) ? fmt(metric.before) : 'НД'}</dd>${metric.period ? `<dd class="cmp-period">${metric.period}</dd>` : ''}</div>
-      <div><dt>Текущий</dt><dd>${Number.isFinite(metric.current) ? fmt(metric.current) : 'НД'}</dd></div>
-    </dl>`}</section>`).join('');
+  const cards = comparisonData().map((metric, index) => `<section class="${chart ? 'panel cmp-card' : 'cmp-card cmp-pair'}${periodView ? ' cmp-period-card' : ''}"><h2>${metric.name}, <span>${metric.unit}</span></h2>
+    ${chart ? (periodView ? periodGraph(metric, index) : comparisonGraph(metric, today)) : comparisonTiles(metric)}</section>`).join('');
   const context = chart ? legend : '<div class="cmp-context"><span>Начало · 01.11.2026</span><span>НД — нет данных</span></div>';
   return '<section class="panel cmp-controls" aria-label="Настройки сравнения">' + switcher + context + '</section>'
     + (chart ? '<h2 class="cmp-section-title">Динамика и сравнение показателей</h2>' + chartSwitcher : '')
