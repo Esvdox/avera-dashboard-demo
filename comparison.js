@@ -173,9 +173,21 @@ function renderComparison() {
   const cards = (chart ? metrics : comparisonTableData(metrics)).map((metric, index) => `<section class="${chart ? 'panel cmp-card' : 'cmp-pair'}${periodView ? ' cmp-period-card' : ''}" aria-label="${safe(metric.name)}">${chart ? `<h2>${metric.name}, <span>${metric.unit}</span></h2>` : ''}
     ${chart ? (periodView ? periodGraph(metric, index) : comparisonGraph(metric, today)) : comparisonTiles(metric)}</section>`).join('');
   const datesValid = comparisonDates.from && comparisonDates.to && comparisonDates.from < comparisonDates.to;
+  const snapshotDates = [...new Set(metrics.flatMap(metric => metric.points.filter(point => Number.isFinite(point.value)).map(point => point.date)))].sort();
+  const dateField = (key, label) => {
+    const selected = comparisonDates[key];
+    const options = snapshotDates.map(date => `<option value="${date}"${date === selected ? ' selected' : ''}>${date.split('-').reverse().join('.')}</option>`).join('');
+    return `<div class="cmp-date-field">
+      <label for="cmp-date-${key}">${label}</label>
+      <select id="cmp-snapshot-${key}" aria-label="Доступные срезы: ${label}">
+        <option value="" disabled${snapshotDates.includes(selected) ? '' : ' selected'}>Выбрать срез</option>${options}
+      </select>
+      <input id="cmp-date-${key}" type="date" value="${safe(selected)}">
+    </div>`;
+  };
   const dates = `<div class="cmp-dates">
-    <label for="cmp-date-from">От<input id="cmp-date-from" type="date" value="${safe(comparisonDates.from)}"></label>
-    <label for="cmp-date-to">До<input id="cmp-date-to" type="date" value="${safe(comparisonDates.to)}"></label>
+    ${dateField('from', 'От')}
+    ${dateField('to', 'До')}
   </div>`;
   const periodNote = !datesValid
     ? 'Укажите две даты. Дата «До» должна быть позже даты «От».'
@@ -197,8 +209,8 @@ renderers.comparison = renderComparison;
 $('#content').addEventListener('change', event => {
   if (current !== 'comparison') return;
   const {id, value} = event.target;
-  if (id === 'cmp-date-from') comparisonDates.from = value;
-  else if (id === 'cmp-date-to') comparisonDates.to = value;
+  if (id === 'cmp-date-from' || id === 'cmp-snapshot-from') comparisonDates.from = value;
+  else if (id === 'cmp-date-to' || id === 'cmp-snapshot-to') comparisonDates.to = value;
   else return;
   render();
   $(`#${id}`).focus();
