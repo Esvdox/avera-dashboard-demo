@@ -85,7 +85,9 @@ function periodGraph(metric, index) {
   const marks = periods.map(series => {
     const py = y(series.point.value);
     const x = series.x;
-    return `<g class="${series.className}"><circle cx="${x}" cy="${py}" r="3"/><text x="${x}" y="${py - 9}" text-anchor="middle">${fmt(series.point.value)}</text>
+    const left = x === 56;
+    const labelX = x + (left ? 7 : -7);
+    return `<g class="${series.className}"><circle cx="${x}" cy="${py}" r="3"/><text class="cmp-point-label" x="${labelX}" y="${py - 9}" text-anchor="${left ? 'start' : 'end'}">${fmt(series.point.value)}</text>
       <text class="cmp-axis-date" x="${x}" y="194" text-anchor="middle">${series.point.date.slice(0, 4)}</text></g>`;
   }).join('');
   const label = date => {
