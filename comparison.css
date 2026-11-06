@@ -33,7 +33,9 @@
 #avera-owner .cmp-section-title{font-size:15px;margin:0 0 8px}
 #avera-owner .cmp-period-card{display:block}
 #avera-owner .cmp-period-card h2{padding-bottom:12px;border-bottom:1px solid var(--line)}
-#avera-owner .cmp-period-graph{display:block;width:100%;max-width:346px;margin:8px auto 0;font-size:11px}
+#avera-owner .cmp-period-graph{display:block;width:100%;margin:8px 0 0;font-size:11px}
+#avera-owner .cmp-selected-range{fill:var(--accent);fill-opacity:.10}
+#avera-owner .cmp-context-point{fill:var(--muted);opacity:.65}
 #avera-owner .cmp-plot-grid path{fill:none;stroke:var(--line);stroke-dasharray:2 3}
 #avera-owner .cmp-plot-grid text{fill:var(--muted)}
 #avera-owner .cmp-plot-axis{fill:none;stroke:var(--muted)}

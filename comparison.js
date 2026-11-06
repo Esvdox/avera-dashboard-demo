@@ -27,28 +27,63 @@ function comparisonData() {
   ];
 }
 
-function periodGraph(metric, index) {
-  const periods = [
-    {letter: 'А', point: metric.points.at(-1), className: 'cmp-series-a', x: 320},
-    {letter: 'Б', point: metric.points.length > 1 ? metric.points.at(-2) : null, className: 'cmp-series-b', x: 56}
-  ].filter(series => Number.isFinite(series.point?.value));
-  const maximum = Math.max(1, metric.startBaseline ?? 0, ...periods.map(series => series.point.value));
+const comparisonDay = 86400000;
+
+function comparisonAxis(width, from, to) {
+  const selectedStart = Date.parse(from);
+  const selectedEnd = Date.parse(to);
+  const duration = selectedEnd - selectedStart;
+  const paddingRatio = duration <= 90 * comparisonDay ? .25 : .08;
+  const padding = Math.max(comparisonDay, Math.round(duration / comparisonDay * paddingRatio) * comparisonDay);
+  const start = selectedStart - padding;
+  const end = selectedEnd + padding;
+  const left = 56;
+  const right = width - 26;
+  const x = date => left + (date - start) / (end - start) * (right - left);
+  const maxTicks = Math.max(3, Math.floor((right - left) / 72));
+  const days = (end - start) / comparisonDay;
+  const unit = days <= 45 ? 'day' : days <= 730 ? 'month' : 'year';
+  const step = Math.max(1, Math.ceil(days / (maxTicks * {day: 1, month: 30, year: 365}[unit])));
+  const cursor = new Date(start);
+  if (unit !== 'day') cursor.setUTCDate(1);
+  if (unit === 'year') cursor.setUTCMonth(0);
+  const formatter = new Intl.DateTimeFormat('ru-RU', {
+    timeZone: 'UTC', ...(unit === 'day' ? {day: '2-digit', month: '2-digit'} : unit === 'month' ? {month: 'short', year: '2-digit'} : {year: 'numeric'})
+  });
+  const ticks = [];
+  while (+cursor <= end) {
+    if (+cursor >= start) ticks.push({x: x(+cursor), label: formatter.format(cursor)});
+    if (unit === 'day') cursor.setUTCDate(cursor.getUTCDate() + step);
+    else if (unit === 'month') cursor.setUTCMonth(cursor.getUTCMonth() + step);
+    else cursor.setUTCFullYear(cursor.getUTCFullYear() + step);
+  }
+  return {left, right, x, start, end, selectedStart, selectedEnd, ticks};
+}
+
+function periodGraph(metric, index, axis, width) {
+  const {left, right, x: dateX, start, end, selectedStart, selectedEnd, ticks} = axis;
+  const observations = metric.points.filter(point => Number.isFinite(point.value) && Date.parse(point.date) >= start && Date.parse(point.date) <= end);
+  const selected = observations.filter(point => Date.parse(point.date) >= selectedStart && Date.parse(point.date) <= selectedEnd)
+    .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+  const periods = selected.map((point, i) => ({point, x: dateX(Date.parse(point.date)),
+    className: i === 0 && selected.length > 1 ? 'cmp-series-b' : 'cmp-series-a'}));
+  const maximum = Math.max(1, metric.startBaseline ?? 0, ...observations.map(point => point.value));
   const stepSize = 10 ** Math.floor(Math.log10(maximum / 3));
   const step = Math.ceil(maximum / (3 * stepSize)) * stepSize;
   const bottom = 176;
   const y = value => bottom - (value / (step * 4)) * 156;
   const grid = [0, 1, 2, 3, 4].map(tick => {
     const value = tick * step;
-    return `<path d="M56 ${y(value)}H320"/><text x="49" y="${y(value) + 3}" text-anchor="end">${fmt(value)}</text>`;
+    return `<path d="M${left} ${y(value)}H${right}"/><text x="${left - 7}" y="${y(value) + 3}" text-anchor="end">${fmt(value)}</text>`;
   }).join('');
-  const ordered = [...periods].reverse();
+  const ordered = periods;
   const coordinates = ordered.map(series => [series.x, y(series.point.value)]);
   const comparisonLine = coordinates.map(pair => pair.join(',')).join(' ');
   const first = coordinates[0];
   const last = coordinates.at(-1);
   const fillId = `cmp-period-fill-${index}`;
   const trace = coordinates.length > 1
-    ? `<defs><linearGradient id="${fillId}" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="${Math.min(first[1], last[1])}" y2="${bottom}">
+    ? `<defs><linearGradient id="${fillId}" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="${Math.min(...coordinates.map(pair => pair[1]))}" y2="${bottom}">
          <stop offset="0" stop-color="var(--accent)" stop-opacity=".34"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/>
        </linearGradient></defs>
        <polygon class="cmp-period-fill" fill="url(#${fillId})" points="${first[0]},${bottom} ${comparisonLine} ${last[0]},${bottom}"/>
@@ -57,10 +92,9 @@ function periodGraph(metric, index) {
   const marks = periods.map(series => {
     const py = y(series.point.value);
     const x = series.x;
-    const left = x === 56;
-    const labelX = x + (left ? 7 : -7);
-    return `<g class="${series.className}"><circle cx="${x}" cy="${py}" r="3"/><text class="cmp-point-label" x="${labelX}" y="${py - 9}" text-anchor="${left ? 'start' : 'end'}">${fmt(series.point.value)}</text>
-      <text class="cmp-axis-date" x="${x}" y="194" text-anchor="middle">${series.point.date.slice(0, 4)}</text></g>`;
+    const alignLeft = x < (left + right) / 2;
+    const labelX = x + (alignLeft ? 7 : -7);
+    return `<g class="${series.className}"><circle cx="${x}" cy="${py}" r="3"/><text class="cmp-point-label" x="${labelX}" y="${py - 9}" text-anchor="${alignLeft ? 'start' : 'end'}">${fmt(series.point.value)}</text></g>`;
   }).join('');
   const label = date => {
     const year = date.slice(0, 4);
@@ -72,18 +106,25 @@ function periodGraph(metric, index) {
     ? `<li class="cmp-series-b"><i aria-hidden="true"></i>Старт · ${fmt(metric.startBaseline)} SKU</li>`
     : '';
   const baseline = startLegend
-    ? `<path class="cmp-start-baseline" d="M56 ${y(metric.startBaseline)}H320"/><text class="cmp-axis-date" x="56" y="194" text-anchor="middle">Старт</text>`
+    ? `<path class="cmp-start-baseline" d="M${left} ${y(metric.startBaseline)}H${right}"/>`
     : '';
-  const seriesLabel = series => series.point.label || 'Период ' + series.letter;
-  const legend = startLegend + (ordered.length === 2
-    ? `<li class="cmp-series-a cmp-series-range"><i aria-hidden="true"></i>Период · ${label(ordered[0].point.date)} → ${label(ordered[1].point.date)}</li>`
+  const seriesLabel = series => series.point.label || 'Срез';
+  const legend = startLegend + (ordered.length > 1
+    ? `<li class="cmp-series-a cmp-series-range"><i aria-hidden="true"></i>Период · ${label(ordered[0].point.date)} → ${label(ordered.at(-1).point.date)}</li>`
     : ordered.map(series => `<li class="${series.className}"><i aria-hidden="true"></i>${seriesLabel(series)} · ${label(series.point.date)}</li>`).join(''));
   const accessible = periods.map(series => `${seriesLabel(series)}, ${label(series.point.date)}, ${fmt(series.point.value)}`).join('. ');
-  return periods.length
-    ? `<svg class="cmp-period-graph" viewBox="0 0 346 202" role="img" aria-label="${safe(metric.name + ', ' + metric.unit + '. ' + accessible)}">
-        <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M56 20V176H320"/>${baseline}${trace}${marks}
-      </svg><ul class="cmp-series-legend">${legend}</ul>`
-    : '<div class="cmp-period-empty">НД</div>';
+  const contextPoints = observations.filter(point => !selected.includes(point)).map(point =>
+    `<circle class="cmp-context-point" cx="${dateX(Date.parse(point.date))}" cy="${y(point.value)}" r="3"><title>${safe(point.date)} · ${fmt(point.value)}</title></circle>`).join('');
+  const tickLabels = ticks.map(tick =>
+    `<text class="cmp-axis-date" x="${tick.x}" y="194" text-anchor="middle">${safe(tick.label)}</text>`).join('');
+  const rangeX = dateX(selectedStart);
+  const rangeWidth = dateX(selectedEnd) - rangeX;
+  return `<svg class="cmp-period-graph" viewBox="0 0 ${width} 202" role="img" aria-label="${safe(metric.name + ', ' + metric.unit + '. ' + (accessible || 'НД в выбранном диапазоне'))}">
+      <rect class="cmp-selected-range" x="${rangeX}" y="20" width="${rangeWidth}" height="156"/>
+      <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M${left} 20V176H${right}"/>
+      ${baseline}${trace}${contextPoints}${marks}${tickLabels}
+      ${periods.length ? '' : `<text class="cmp-axis-date" x="${rangeX + rangeWidth / 2}" y="94" text-anchor="middle">НД в выбранном диапазоне</text>`}
+    </svg>${legend ? `<ul class="cmp-series-legend">${legend}</ul>` : ''}`;
 }
 
 function comparisonTableData(metrics) {
@@ -137,11 +178,11 @@ function renderComparison() {
   const metrics = comparisonData();
   const {from, to} = comparisonDates;
   const datesValid = from && to && from < to;
-  const visibleMetrics = chart
-    ? metrics.map(metric => ({...metric, points: datesValid ? metric.points.filter(point => point.date >= from && point.date <= to) : []}))
-    : comparisonTableData(metrics);
+  const plotWidth = Math.max(240, $('#content').clientWidth - 30);
+  const axis = chart && datesValid ? comparisonAxis(plotWidth, from, to) : null;
+  const visibleMetrics = chart ? metrics : comparisonTableData(metrics);
   const cards = visibleMetrics.map((metric, index) => `<section class="${chart ? 'panel cmp-card cmp-period-card' : 'cmp-pair'}" aria-label="${safe(metric.name)}">${chart ? `<h2>${metric.name}, <span>${metric.unit}</span></h2>` : ''}
-    ${chart ? periodGraph(metric, index) : comparisonTiles(metric)}</section>`).join('');
+    ${chart ? (axis ? periodGraph(metric, index, axis, plotWidth) : '<div class="cmp-period-empty">НД</div>') : comparisonTiles(metric)}</section>`).join('');
 
   const snapshotDates = [...new Set(metrics.flatMap(metric => metric.points.filter(point => Number.isFinite(point.value)).map(point => point.date)))].sort();
   const dateField = (key, label) => {
@@ -160,7 +201,7 @@ function renderComparison() {
   </div>`;
   const periodNote = !datesValid
     ? 'Укажите две даты. Дата «До» должна быть позже даты «От».'
-    : 'НД — нет среза на выбранную дату.';
+    : chart ? 'Голубая зона — выбранный диапазон. Точки — доступные срезы.' : 'НД — нет среза на выбранную дату.';
   const context = `${dates}<div class="cmp-context" role="status"><span>${periodNote}</span></div>`;
   return '<section class="panel cmp-controls" aria-label="Настройки сравнения">' + switcher + context + '</section>'
     + (chart ? '<h2 class="cmp-section-title">Динамика и сравнение показателей</h2>' : '')
@@ -199,4 +240,11 @@ window.applyActualLabels = function () {
   if (current !== 'comparison') return;
   $('.asof').innerHTML = '<strong>01.11.2026</strong><span>Дата прихода</span>';
 };
+let comparisonContentWidth = $('#content').clientWidth;
+new ResizeObserver(() => {
+  const width = $('#content').clientWidth;
+  if (width === comparisonContentWidth) return;
+  comparisonContentWidth = width;
+  if (current === 'comparison' && comparisonView === 'chart') render();
+}).observe($('#content'));
 render();
