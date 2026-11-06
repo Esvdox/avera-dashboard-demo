@@ -13,17 +13,30 @@ function comparisonData() {
     const value = metrics.value(window.AVERA_ACCOUNTING.incomeNine, '2110', column);
     return {date: `${2025 + index}-09-30`, value: Number.isFinite(value) ? value / 1000 : null};
   });
-  const turnover = window.AVERA_HR_TURNOVER.rows.slice(0, 2).map(row => ({
-    date: row[0].slice(0, 4) + '-12-31', value: row[1]
+  const annualRevenue = [2, 3].map((column, index) => {
+    const value = metrics.value(window.AVERA_ACCOUNTING.incomeAnnual, '2110', column);
+    return {date: `${2024 + index}-12-31`, value: Number.isFinite(value) ? value / 1000 : null};
+  });
+  const turnover = window.AVERA_HR_TURNOVER.rows.map(row => ({
+    date: row[0].slice(0, 4) + (row[0].includes('ноябрь') ? '-11-01' : '-12-31'),
+    value: row[1], periodLabel: row[0], partial: row[0].includes('ноябрь')
   }));
   const start = baseline.asOf.split('.').reverse().join('-');
+  const staffing = window.AVERA_STAFFING;
+  const staffingMetrics = staffing ? [
+    ['Предусмотрено', staffing.planned], ['Занято', staffing.planned - staffing.vacant], ['Свободно', staffing.vacant]
+  ].map(([name, value]) => ({name: name + ' по ШР', unit: 'ставки', icon: 'people', points: [
+    {date: staffing.asOf.split('.').reverse().join('-'), value}
+  ]})) : [];
   return [
     {name: 'Выручка', unit: 'млн ₽', before: revenue[1].value, period: '9 мес. 2026', points: revenue},
     {name: 'Текучесть', unit: '%', before: turnover[1]?.value, period: '2025', points: turnover},
     {name: 'Аттракционы', unit: 'SKU', startBaseline: baseline.items.length, points: [{date: start, value: baseline.items.length}]},
     {name: 'Прочие продукты', unit: 'SKU', points: [{date: '2026-11-01', value: 0, label: 'Старт'}]},
     {name: 'Сделки', unit: 'шт.', points: []},
-    {name: 'Маржа сделок', unit: '%', points: []}
+    {name: 'Маржа сделок', unit: '%', points: []},
+    {name: 'Выручка за год', unit: 'млн ₽', icon: 'wallet', comparable: true, points: annualRevenue},
+    ...staffingMetrics
   ];
 }
 
@@ -34,7 +47,8 @@ function comparisonAxis(width, from, to) {
   const selectedEnd = Date.parse(to);
   const duration = selectedEnd - selectedStart;
   const paddingRatio = duration <= 90 * comparisonDay ? .25 : .08;
-  const padding = Math.max(comparisonDay, Math.round(duration / comparisonDay * paddingRatio) * comparisonDay);
+  const padding = Math.max(duration > 90 * comparisonDay ? 32 * comparisonDay : comparisonDay,
+    Math.round(duration / comparisonDay * paddingRatio) * comparisonDay);
   const start = selectedStart - padding;
   const end = selectedEnd + padding;
   const left = 56;
@@ -68,15 +82,18 @@ function periodGraph(metric, index, axis, width) {
   const periods = selected.map((point, i) => ({point, x: dateX(Date.parse(point.date)),
     className: i === 0 && selected.length > 1 ? 'cmp-series-b' : 'cmp-series-a'}));
   const maximum = Math.max(1, metric.startBaseline ?? 0, ...observations.map(point => point.value));
-  const stepSize = 10 ** Math.floor(Math.log10(maximum / 3));
-  const step = Math.ceil(maximum / (3 * stepSize)) * stepSize;
+  const targetStep = maximum * 1.1 / 5;
+  const magnitude = 10 ** Math.floor(Math.log10(targetStep));
+  const step = Math.max(['SKU', 'шт.'].includes(metric.unit) ? 1 : 0,
+    [1, 2, 2.5, 5, 10].find(value => value * magnitude >= targetStep) * magnitude);
+  const topTick = Math.ceil(maximum * 1.1 / step);
   const bottom = 176;
-  const y = value => bottom - (value / (step * 4)) * 156;
-  const grid = [0, 1, 2, 3, 4].map(tick => {
+  const y = value => bottom - (value / (step * topTick)) * 156;
+  const grid = Array.from({length: topTick + 1}, (_, tick) => {
     const value = tick * step;
-    return `<path d="M${left} ${y(value)}H${right}"/><text x="${left - 7}" y="${y(value) + 3}" text-anchor="end">${fmt(value)}</text>`;
+    return `<path d="M${left} ${y(value)}H${right}"/><text x="${left - 7}" y="${y(value) + 3}" text-anchor="end">${fmt(value)}${metric.unit === '%' ? '%' : ''}</text>`;
   }).join('');
-  const ordered = periods;
+  const ordered = periods.filter(series => !series.point.partial);
   const coordinates = ordered.map(series => [series.x, y(series.point.value)]);
   const comparisonLine = coordinates.map(pair => pair.join(',')).join(' ');
   const first = coordinates[0];
@@ -94,7 +111,7 @@ function periodGraph(metric, index, axis, width) {
     const x = series.x;
     const alignLeft = x < (left + right) / 2;
     const labelX = x + (alignLeft ? 7 : -7);
-    return `<g class="${series.className}"><circle cx="${x}" cy="${py}" r="3"/><text class="cmp-point-label" x="${labelX}" y="${py - 9}" text-anchor="${alignLeft ? 'start' : 'end'}">${fmt(series.point.value)}</text></g>`;
+    return `<g class="${series.className}"><circle cx="${x}" cy="${py}" r="3"/><text class="cmp-point-label" x="${labelX}" y="${py - 9}" text-anchor="${alignLeft ? 'start' : 'end'}">${fmt(series.point.value)}${metric.unit === '%' ? '%' : ''}</text></g>`;
   }).join('');
   const label = date => {
     const year = date.slice(0, 4);
@@ -111,10 +128,11 @@ function periodGraph(metric, index, axis, width) {
   const seriesLabel = series => series.point.label || 'Срез';
   const legend = startLegend + (ordered.length > 1
     ? `<li class="cmp-series-a cmp-series-range"><i aria-hidden="true"></i>Период · ${label(ordered[0].point.date)} → ${label(ordered.at(-1).point.date)}</li>`
-    : ordered.map(series => `<li class="${series.className}"><i aria-hidden="true"></i>${seriesLabel(series)} · ${label(series.point.date)}</li>`).join(''));
-  const accessible = periods.map(series => `${seriesLabel(series)}, ${label(series.point.date)}, ${fmt(series.point.value)}`).join('. ');
+    : ordered.map(series => `<li class="${series.className}"><i aria-hidden="true"></i>${seriesLabel(series)} · ${label(series.point.date)}</li>`).join(''))
+    + observations.filter(point => point.partial).map(point => `<li>${safe(point.periodLabel)} · ${fmt(point.value)}%</li>`).join('');
+  const accessible = periods.map(series => `${seriesLabel(series)}, ${series.point.periodLabel || label(series.point.date)}, ${fmt(series.point.value)}`).join('. ');
   const contextPoints = observations.filter(point => !selected.includes(point)).map(point =>
-    `<circle class="cmp-context-point" cx="${dateX(Date.parse(point.date))}" cy="${y(point.value)}" r="3"><title>${safe(point.date)} · ${fmt(point.value)}</title></circle>`).join('');
+    `<circle class="cmp-context-point" cx="${dateX(Date.parse(point.date))}" cy="${y(point.value)}" r="3"><title>${safe(point.periodLabel || point.date)} · ${fmt(point.value)} ${safe(metric.unit)}</title></circle>`).join('');
   const tickLabels = ticks.map(tick =>
     `<text class="cmp-axis-date" x="${tick.x}" y="194" text-anchor="middle">${safe(tick.label)}</text>`).join('');
   const rangeX = dateX(selectedStart);
@@ -137,8 +155,8 @@ function comparisonTableData(metrics) {
     ...metrics.map((metric, index) => ({
       ...metric,
       direction: index === 1 ? 'lower' : index === 0 || index >= 4 ? 'higher' : null,
-      comparableSnapshots: index <= 3,
-      icon: ['wallet', 'people', 'products', 'products', 'sales', 'trend'][index],
+      comparableSnapshots: index <= 3 || metric.comparable,
+      icon: metric.icon || ['wallet', 'people', 'products', 'products', 'sales', 'trend'][index],
       shortName: index === 3 ? 'Прочие SKU' : metric.name
     })),
     {name: 'Расходы', unit: 'млн ₽', direction: 'lower', icon: 'wallet', comparableSnapshots: true,
@@ -149,7 +167,7 @@ function comparisonTableData(metrics) {
     if (!from || !to || from >= to) return {...metric, before: null, current: null};
     const before = metric.points.find(point => point.date === from);
     const current = metric.points.find(point => point.date === to);
-    return {...metric, before: before?.value, current: current?.value, comparable: Boolean(metric.comparableSnapshots && before && current)};
+    return {...metric, before: before?.value, current: current?.value, comparable: Boolean(metric.comparableSnapshots && before && current && !before.partial && !current.partial)};
   });
 }
 
@@ -208,7 +226,7 @@ function renderComparison() {
     + (chart ? '' : '<div class="cmp-column-head"><span>База</span><span>Сейчас</span></div>')
     + '<div class="cmp-list">' + cards + '</div>'
     + `<details class="panel cmp-details"><summary>Источники и методика</summary>
-      <p>Выручка на графиках — январь–сентябрь, ОФР. Текучесть — годовые данные 1С. Срез SKU аттракционов — 02.11.2026. Графики показывают срезы между датами «От» и «До». НД — нет данных.</p>
+      <p>Выручка за январь–сентябрь и за полный год показана отдельно по ОФР. Текучесть 1С — увольнения за период / средняя численность × 100%; значение может превышать 100%. Январь–ноябрь 2026 отмечен отдельно на ноябре: точный день отчёта не указан. Срез SKU аттракционов — 02.11.2026. НД — нет данных.</p>
       <p>Сделки считаются по дате подписания. Маржа — сумма маржи / сумма выручки без НДС. Плановая и фактическая маржа учитываются отдельно.</p></details>
       <details class="panel cmp-details"><summary>Решения и результат</summary>
       <p>Дата решения, ответственный, срок, показатель и подтверждённый эффект.</p>
