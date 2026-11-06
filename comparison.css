@@ -1,0 +1,26 @@
+#avera-owner .cmp-page #subtitle:empty{display:none}
+#avera-owner .cmp-switch,#avera-owner .cmp-legend{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+#avera-owner .cmp-switch button{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:12px;font-size:13px;min-height:40px;padding:8px 13px}
+#avera-owner .cmp-switch button[aria-pressed=true]{background:var(--button-background);color:var(--button-text);border-color:var(--button-background)}
+#avera-owner .cmp-legend{gap:8px 16px;font-size:11px;color:var(--muted)}
+#avera-owner .cmp-legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+#avera-owner .cmp-legend i{height:13px;border-left:2px solid var(--accent)}
+#avera-owner .cmp-legend span+span i{border-left:1px dashed currentColor}
+#avera-owner .cmp-list{display:grid;gap:8px}
+#avera-owner .cmp-card{display:grid;grid-template-rows:22px 102px;gap:3px;padding:10px 14px;margin:0}
+#avera-owner .cmp-card h2{font-size:15px;line-height:22px;margin:0}
+#avera-owner .cmp-card h2 span{color:var(--muted);font-weight:500}
+#avera-owner .cmp-values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:18px 31px 16px;align-content:center;align-items:baseline;column-gap:12px;margin:0;font-variant-numeric:tabular-nums}
+#avera-owner .cmp-values>div{display:grid;grid-row:span 3;grid-template-rows:18px 31px 16px;align-self:start}
+#avera-owner .cmp-values dt{font-size:12px;color:var(--muted);white-space:nowrap}
+#avera-owner .cmp-values dd{font-size:23px;font-weight:700;line-height:31px;margin:0;white-space:nowrap}
+#avera-owner .cmp-values dd.cmp-period{font-size:11px;font-weight:400;line-height:16px;color:var(--muted)}
+#avera-owner .cmp-graph{width:100%;height:102px;color:var(--muted);font-size:10px}
+#avera-owner .cmp-details{margin-top:8px}
+#avera-owner .cmp-details p{margin-top:8px}
+
+@supports (grid-template-rows:subgrid){
+  #avera-owner .av-grid>.av-metric,#avera-owner .summary-row>.summary{
+    display:grid;grid-row:span 3;grid-template-rows:subgrid;row-gap:4px;align-items:start;
+  }
+}
