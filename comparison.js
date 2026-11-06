@@ -65,7 +65,9 @@ function renderComparison() {
       <div><dt>Исходный</dt><dd>${Number.isFinite(metric.before) ? fmt(metric.before) : 'НД'}</dd>${metric.period ? `<dd class="cmp-period">${metric.period}</dd>` : ''}</div>
       <div><dt>Текущий</dt><dd>${Number.isFinite(metric.current) ? fmt(metric.current) : 'НД'}</dd></div>
     </dl>`}</section>`).join('');
-  return switcher + legend + '<div class="cmp-list">' + cards + '</div>'
+  const context = chart ? legend : '<div class="cmp-context"><span>Начало · 01.11.2026</span><span>НД — нет данных</span></div>';
+  return '<section class="panel cmp-controls" aria-label="Настройки сравнения">' + switcher + context + '</section>'
+    + '<div class="cmp-list">' + cards + '</div>'
     + `<details class="panel cmp-details"><summary>Источники и методика</summary>
       <p>Выручка на графиках — январь–сентябрь, ОФР. Текучесть — годовые данные 1С. Срез SKU аттракционов — 02.11.2026. Шкала начинается с 2024 года, первого года доступной отчётности. НД — нет данных.</p>
       <p>Сделки считаются по дате подписания. Маржа — сумма маржи / сумма выручки без НДС. Плановая и фактическая маржа учитываются отдельно.</p></details>
@@ -87,7 +89,6 @@ window.applyActualLabels = function () {
   applyComparisonLabels();
   $('main').classList.toggle('cmp-page', current === 'comparison');
   if (current !== 'comparison') return;
-  $('main > .notice').textContent = 'НД — нет данных';
   $('.asof').innerHTML = '<strong>01.11.2026</strong><span>Дата прихода</span>';
 };
 render();
