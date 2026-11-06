@@ -4,6 +4,7 @@ tabs.splice(1, 0, ['comparison', 'Сравнение', 'Сравнение', '']
 window.avNavIcons.comparison = 'trend';
 
 let comparisonView = 'table';
+let comparisonChartView = 'periods';
 
 function comparisonData() {
   const metrics = window.AVERA_METRICS;
@@ -53,20 +54,58 @@ function comparisonGraph(metric, todayDate) {
   </svg>`;
 }
 
+function periodGraph(metric, index) {
+  const periods = [
+    {letter: 'А', point: metric.points.at(-1), className: 'cmp-series-a', x: 120},
+    {letter: 'Б', point: metric.points.length > 1 ? metric.points.at(-2) : null, className: 'cmp-series-b', x: 241}
+  ].filter(series => Number.isFinite(series.point?.value));
+  const maximum = Math.max(1, ...periods.map(series => series.point.value));
+  const stepSize = 10 ** Math.floor(Math.log10(maximum / 3));
+  const step = Math.ceil(maximum / (3 * stepSize)) * stepSize;
+  const y = value => 163 - (value / (step * 4)) * 136;
+  const grid = [0, 1, 2, 3, 4].map(tick => {
+    const value = tick * step;
+    return `<path d="M39 ${y(value)}H307"/><text x="32" y="${y(value) + 3}" text-anchor="end">${fmt(value)}</text>`;
+  }).join('');
+  const marks = periods.map(series => {
+    const py = y(series.point.value);
+    return `<g class="${series.className}"><circle cx="${series.x}" cy="${py}" r="4"/><text x="${series.x}" y="${py - 9}" text-anchor="middle">${fmt(series.point.value)}</text>
+      <text x="${series.x}" y="181" text-anchor="middle">${series.letter}</text></g>`;
+  }).join('');
+  const label = date => {
+    const year = date.slice(0, 4);
+    if (index === 0) return 'янв.–сен. ' + year;
+    if (index === 1) return year + ' год';
+    return date.split('-').reverse().join('.');
+  };
+  const legend = periods.map(series => `<li class="${series.className}"><i aria-hidden="true"></i>Период ${series.letter} · ${label(series.point.date)}</li>`).join('');
+  const accessible = periods.map(series => `Период ${series.letter}, ${label(series.point.date)}, ${fmt(series.point.value)}`).join('. ');
+  return periods.length
+    ? `<svg class="cmp-period-graph" viewBox="0 0 320 188" role="img" aria-label="${safe(metric.name + ', ' + metric.unit + '. ' + accessible)}">
+        <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M39 27V163H307"/>${marks}
+      </svg><ul class="cmp-series-legend">${legend}</ul>`
+    : '<div class="cmp-period-empty">НД</div>';
+}
+
 function renderComparison() {
   const today = new Intl.DateTimeFormat('sv-SE', {timeZone: 'Europe/Moscow', year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date());
   const chart = comparisonView === 'chart';
   const switcher = `<div class="cmp-switch" role="group" aria-label="Вид сравнения">
     <button type="button" data-comparison-view="table" aria-pressed="${!chart}">Было / стало</button>
     <button type="button" data-comparison-view="chart" aria-pressed="${chart}">Графики</button></div>`;
-  const legend = chart ? `<div class="cmp-legend"><span><i></i>Приход · 01.11.26</span><span><i></i>Сегодня · ${today.split('-').reverse().join('.')}</span></div>` : '';
-  const cards = comparisonData().map(metric => `<section class="panel cmp-card"><h2>${metric.name}, <span>${metric.unit}</span></h2>
-    ${chart ? comparisonGraph(metric, today) : `<dl class="cmp-values">
+  const periodView = chart && comparisonChartView === 'periods';
+  const chartSwitcher = chart ? `<div class="cmp-switch cmp-chart-switch" role="group" aria-label="Вид графиков">
+    <button type="button" data-chart-view="periods" aria-pressed="${periodView}">Периоды</button>
+    <button type="button" data-chart-view="timeline" aria-pressed="${!periodView}">Хронология</button></div>` : '';
+  const legend = chart && !periodView ? `<div class="cmp-legend"><span><i></i>Приход · 01.11.26</span><span><i></i>Сегодня · ${today.split('-').reverse().join('.')}</span></div>` : '';
+  const cards = comparisonData().map((metric, index) => `<section class="panel cmp-card${periodView ? ' cmp-period-card' : ''}"><h2>${metric.name}, <span>${metric.unit}</span></h2>
+    ${chart ? (periodView ? periodGraph(metric, index) : comparisonGraph(metric, today)) : `<dl class="cmp-values">
       <div><dt>Исходный</dt><dd>${Number.isFinite(metric.before) ? fmt(metric.before) : 'НД'}</dd>${metric.period ? `<dd class="cmp-period">${metric.period}</dd>` : ''}</div>
       <div><dt>Текущий</dt><dd>${Number.isFinite(metric.current) ? fmt(metric.current) : 'НД'}</dd></div>
     </dl>`}</section>`).join('');
   const context = chart ? legend : '<div class="cmp-context"><span>Начало · 01.11.2026</span><span>НД — нет данных</span></div>';
   return '<section class="panel cmp-controls" aria-label="Настройки сравнения">' + switcher + context + '</section>'
+    + (chart ? '<h2 class="cmp-section-title">Динамика и сравнение показателей</h2>' + chartSwitcher : '')
     + '<div class="cmp-list">' + cards + '</div>'
     + `<details class="panel cmp-details"><summary>Источники и методика</summary>
       <p>Выручка на графиках — январь–сентябрь, ОФР. Текучесть — годовые данные 1С. Срез SKU аттракционов — 02.11.2026. Шкала начинается с 2024 года, первого года доступной отчётности. НД — нет данных.</p>
@@ -78,11 +117,13 @@ function renderComparison() {
 
 renderers.comparison = renderComparison;
 $('#content').addEventListener('click', event => {
-  const button = event.target.closest('[data-comparison-view]');
+  const button = event.target.closest('[data-comparison-view], [data-chart-view]');
   if (current !== 'comparison' || !button) return;
-  comparisonView = button.dataset.comparisonView;
+  const {comparisonView: view, chartView} = button.dataset;
+  if (view) comparisonView = view;
+  if (chartView) comparisonChartView = chartView;
   render();
-  $(`[data-comparison-view="${comparisonView}"]`).focus();
+  $(view ? `[data-comparison-view="${view}"]` : `[data-chart-view="${chartView}"]`).focus();
 });
 const applyComparisonLabels = window.applyActualLabels;
 window.applyActualLabels = function () {
