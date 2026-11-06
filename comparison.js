@@ -6,9 +6,11 @@ window.avNavIcons.comparison = 'trend';
 let comparisonView = new URLSearchParams(location.search).get('view') === 'charts' ? 'chart' : 'table';
 let comparisonChartView = 'periods';
 let comparisonPeriod = new URLSearchParams(location.search).get('period') === 'reports' ? 'reports' : 'baseline';
+const comparisonDates = {from: '2025-09-30', to: '2026-09-30'};
 const comparisonPeriods = [
   ['baseline', 'От стартового среза', 'Исходные значения зафиксированы по доступным источникам.'],
-  ['reports', 'Последние сопоставимые отчёты', 'Сравнение исторических отчётов. Даты указаны в каждой паре.'],
+  ['reports', 'Последние сопоставимые отчёты', 'Выручка и расходы: 9 мес. 2025 → 9 мес. 2026. Текучесть: 2024 → 2025.'],
+  ['dates', 'По датам', 'Показаны срезы на выбранные даты. НД означает, что среза нет.'],
   ['week', 'Последние 7 дней', 'Последние 7 дней и предыдущие 7 дней. Недельных данных пока нет.'],
   ['all', 'За всё время', 'Для сравнения нужна полная история. Данные за весь срок пока не загружены.']
 ];
@@ -124,10 +126,17 @@ function comparisonTableData(metrics) {
       shortName: index === 3 ? 'Прочие SKU' : metric.name
     })),
     {name: 'Расходы', unit: 'млн ₽', before: expenses[1], period: '9 мес. 2026', direction: 'lower', icon: 'wallet',
-      points: expenses.map(value => ({value})), reportPeriods: ['9 мес. 2025', '9 мес. 2026']}
+      points: expenses.map((value, index) => ({value, date: `${2025 + index}-09-30`})), reportPeriods: ['9 мес. 2025', '9 мес. 2026']}
   ];
   return rows.map(metric => {
     if (comparisonPeriod === 'baseline') return metric;
+    if (comparisonPeriod === 'dates') {
+      const {from, to} = comparisonDates;
+      if (!from || !to || from >= to) return {...metric, before: null, current: null};
+      const before = metric.points.find(point => point.date === from);
+      const current = metric.points.find(point => point.date === to);
+      return {...metric, before: before?.value, current: current?.value, comparable: Boolean(metric.reportPeriods && before && current)};
+    }
     if (comparisonPeriod === 'reports' && metric.reportPeriods) {
       const [before, current] = metric.points;
       const [period, currentPeriod] = metric.reportPeriods;
@@ -145,12 +154,12 @@ function comparisonTiles(metric) {
   const trend = change === null ? '' : change === 0
     ? '<span class="cmp-trend cmp-trend-neutral" title="Без изменений" aria-label="Без изменений">—</span>'
     : `<span class="cmp-trend cmp-trend-${tone}" aria-label="${tone === 'good' ? 'Улучшение' : tone === 'bad' ? 'Ухудшение' : 'Изменение'}, ${fmt(change)}%"><span aria-hidden="true">${change > 0 ? '↗' : '↘'}</span> ${change > 0 ? '+' : ''}${fmt(change)}%</span>`;
-  const tile = (label, value, note, period) => `<div class="panel cmp-tile" role="group" aria-label="${label} · ${safe(metric.name)}"><dt title="${safe(metric.name)}">${window.avIcon(metric.icon)}<span>${safe(metric.shortName || metric.name)}</span></dt>
+  const tile = (label, value, note) => `<div class="panel cmp-tile" role="group" aria-label="${label} · ${safe(metric.name)}"><dt title="${safe(metric.name)}">${window.avIcon(metric.icon)}<span>${safe(metric.shortName || metric.name)}</span></dt>
     <dd>${Number.isFinite(value) ? `${fmt(value)} <span class="cmp-unit">${safe(metric.unit)}</span>` : 'НД'}</dd>
-    <dd class="cmp-period"${period ? ` title="${safe(period)}"` : ''}>${note}</dd></div>`;
+    <dd class="cmp-period">${note}</dd></div>`;
   return `<dl class="cmp-values">
-    ${tile('База', metric.before, metric.period || '')}
-    ${tile('Сейчас', metric.current, trend + (metric.currentPeriod ? `<span class="cmp-tile-date">${safe(metric.currentPeriod)}</span>` : ''), metric.currentPeriod)}
+    ${tile('База', metric.before, '')}
+    ${tile('Сейчас', metric.current, trend)}
   </dl>`;
 }
 
@@ -168,9 +177,17 @@ function renderComparison() {
   const metrics = comparisonData();
   const cards = (chart ? metrics : comparisonTableData(metrics)).map((metric, index) => `<section class="${chart ? 'panel cmp-card' : 'cmp-pair'}${periodView ? ' cmp-period-card' : ''}" aria-label="${safe(metric.name)}">${chart ? `<h2>${metric.name}, <span>${metric.unit}</span></h2>` : ''}
     ${chart ? (periodView ? periodGraph(metric, index) : comparisonGraph(metric, today)) : comparisonTiles(metric)}</section>`).join('');
+  const datesValid = comparisonDates.from && comparisonDates.to && comparisonDates.from < comparisonDates.to;
+  const dates = comparisonPeriod === 'dates' ? `<div class="cmp-dates">
+    <label for="cmp-date-from">От<input id="cmp-date-from" type="date" value="${safe(comparisonDates.from)}"></label>
+    <label for="cmp-date-to">До<input id="cmp-date-to" type="date" value="${safe(comparisonDates.to)}"></label>
+  </div>` : '';
+  const periodNote = comparisonPeriod === 'dates' && !datesValid
+    ? 'Укажите две даты. Дата «До» должна быть позже даты «От».'
+    : comparisonPeriods.find(([id]) => id === comparisonPeriod)[2];
   const context = chart ? legend : `<label class="cmp-period-control" for="cmp-period-select">Период сравнения
     <select id="cmp-period-select">${comparisonPeriods.map(([id, label]) => `<option value="${id}"${id === comparisonPeriod ? ' selected' : ''}>${label}</option>`).join('')}</select></label>
-    <div class="cmp-context"><span>${comparisonPeriods.find(([id]) => id === comparisonPeriod)[2]}</span></div>`;
+    ${dates}<div class="cmp-context" role="status"><span>${periodNote}</span></div>`;
   return '<section class="panel cmp-controls" aria-label="Настройки сравнения">' + switcher + context + '</section>'
     + (chart ? '<h2 class="cmp-section-title">Динамика и сравнение показателей</h2>' + chartSwitcher : '')
     + (chart ? '' : '<div class="cmp-column-head"><span>База</span><span>Сейчас</span></div>')
@@ -185,10 +202,14 @@ function renderComparison() {
 
 renderers.comparison = renderComparison;
 $('#content').addEventListener('change', event => {
-  if (current !== 'comparison' || event.target.id !== 'cmp-period-select') return;
-  comparisonPeriod = event.target.value;
+  if (current !== 'comparison') return;
+  const {id, value} = event.target;
+  if (id === 'cmp-period-select') comparisonPeriod = value;
+  else if (id === 'cmp-date-from') comparisonDates.from = value;
+  else if (id === 'cmp-date-to') comparisonDates.to = value;
+  else return;
   render();
-  $('#cmp-period-select').focus();
+  $(`#${id}`).focus();
 });
 $('#content').addEventListener('click', event => {
   const button = event.target.closest('[data-comparison-view], [data-chart-view]');
