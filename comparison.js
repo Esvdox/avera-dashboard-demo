@@ -135,8 +135,9 @@ function periodGraph(metric, index, axis, width) {
     `<circle class="cmp-context-point" cx="${dateX(Date.parse(point.date))}" cy="${y(point.value)}" r="3"><title>${safe(point.periodLabel || point.date)} · ${fmt(point.value)} ${safe(metric.unit)}</title></circle>`).join('');
   const tickLabels = ticks.map(tick =>
     `<text class="cmp-axis-date" x="${tick.x}" y="194" text-anchor="middle">${safe(tick.label)}</text>`).join('');
-  const rangeX = dateX(selectedStart);
-  const rangeWidth = dateX(selectedEnd) - rangeX;
+  const halfDay = selectedStart === selectedEnd ? comparisonDay / 2 : 0;
+  const rangeX = dateX(selectedStart - halfDay);
+  const rangeWidth = dateX(selectedEnd + halfDay) - rangeX;
   return `<svg class="cmp-period-graph" viewBox="0 0 ${width} 202" role="img" aria-label="${safe(metric.name + ', ' + metric.unit + '. ' + (accessible || 'НД в выбранном диапазоне'))}">
       <rect class="cmp-selected-range" x="${rangeX}" y="20" width="${rangeWidth}" height="156"/>
       <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M${left} 20V176H${right}"/>
@@ -164,7 +165,7 @@ function comparisonTableData(metrics) {
   ];
   return rows.map(metric => {
     const {from, to} = comparisonDates;
-    if (!from || !to || from >= to) return {...metric, before: null, current: null};
+    if (!from || !to || from > to) return {...metric, before: null, current: null};
     const before = metric.points.find(point => point.date === from);
     const current = metric.points.find(point => point.date === to);
     return {...metric, before: before?.value, current: current?.value, comparable: Boolean(metric.comparableSnapshots && before && current && !before.partial && !current.partial)};
@@ -195,30 +196,23 @@ function renderComparison() {
     <button type="button" data-comparison-view="chart" aria-pressed="${chart}">Графики</button></div>`;
   const metrics = comparisonData();
   const {from, to} = comparisonDates;
-  const datesValid = from && to && from < to;
+  const datesValid = from && to && from <= to;
   const plotWidth = Math.max(240, $('#content').clientWidth - 30);
   const axis = chart && datesValid ? comparisonAxis(plotWidth, from, to) : null;
   const visibleMetrics = chart ? metrics : comparisonTableData(metrics);
   const cards = visibleMetrics.map((metric, index) => `<section class="${chart ? 'panel cmp-card cmp-period-card' : 'cmp-pair'}" aria-label="${safe(metric.name)}">${chart ? `<h2>${metric.name}, <span>${metric.unit}</span></h2>` : ''}
     ${chart ? (axis ? periodGraph(metric, index, axis, plotWidth) : '<div class="cmp-period-empty">НД</div>') : comparisonTiles(metric)}</section>`).join('');
 
-  const snapshotDates = [...new Set(metrics.flatMap(metric => metric.points.filter(point => Number.isFinite(point.value)).map(point => point.date)))].sort();
-  const dateField = (key, label) => {
-    const selected = comparisonDates[key];
-    const options = snapshotDates.map(date => `<option value="${date}"${date === selected ? ' selected' : ''}>${date.split('-').reverse().join('.')}</option>`).join('');
-    return `<div class="cmp-date-field">
+  const dateField = (key, label) => `<div class="cmp-date-field">
       <label for="cmp-snapshot-${key}">${label}</label>
-      <select id="cmp-snapshot-${key}" aria-label="Доступные срезы: ${label}">
-        <option value="" disabled${snapshotDates.includes(selected) ? '' : ' selected'}>Выбрать срез</option>${options}
-      </select>
+      <input type="date" id="cmp-snapshot-${key}" value="${safe(comparisonDates[key])}" required>
     </div>`;
-  };
   const dates = `<div class="cmp-dates">
     ${dateField('from', 'От')}
     ${dateField('to', 'До')}
   </div>`;
   const periodNote = !datesValid
-    ? 'Укажите две даты. Дата «До» должна быть позже даты «От».'
+    ? 'Укажите две даты. Дата «До» должна быть не раньше даты «От».'
     : chart ? 'Голубая зона — выбранный диапазон. Точки — доступные срезы.' : 'НД — нет среза на выбранную дату.';
   const context = `${dates}<div class="cmp-context" role="status"><span>${periodNote}</span></div>`;
   return '<section class="panel cmp-controls" aria-label="Настройки сравнения">' + switcher + context + '</section>'
