@@ -5,7 +5,7 @@ window.avNavIcons.comparison = 'trend';
 
 let comparisonView = new URLSearchParams(location.search).get('view') === 'charts' ? 'chart' : 'table';
 let comparisonChartView = 'periods';
-let comparisonPeriod = 'baseline';
+let comparisonPeriod = new URLSearchParams(location.search).get('period') === 'reports' ? 'reports' : 'baseline';
 const comparisonPeriods = [
   ['baseline', 'От стартового среза', 'Исходные значения зафиксированы по доступным источникам.'],
   ['reports', 'Последние сопоставимые отчёты', 'Сравнение исторических отчётов. Даты указаны в каждой паре.'],
@@ -145,7 +145,7 @@ function comparisonTiles(metric) {
     <dd>${Number.isFinite(value) ? fmt(value) : 'НД'}</dd>
     <dd class="cmp-period"${period ? ` title="${safe(period)}"` : ''}>${note}</dd></div>`;
   return `<dl class="cmp-values">
-    ${tile('Было', metric.before, metric.period || '')}
+    ${tile('База', metric.before, metric.period || '')}
     ${tile(metric.currentPeriod ? 'Сейчас · ' + metric.currentPeriod : 'Сейчас', metric.current, trend, metric.currentPeriod)}
   </dl>`;
 }
