@@ -119,9 +119,11 @@ function comparisonTableData(metrics) {
     ...metrics.map((metric, index) => ({
       ...metric,
       direction: index === 1 ? 'lower' : index === 0 || index >= 4 ? 'higher' : null,
-      reportPeriods: index === 0 ? ['9 мес. 2025', '9 мес. 2026'] : index === 1 ? ['2024', '2025'] : null
+      reportPeriods: index === 0 ? ['9 мес. 2025', '9 мес. 2026'] : index === 1 ? ['2024', '2025'] : null,
+      icon: ['wallet', 'people', 'products', 'products', 'sales', 'trend'][index],
+      shortName: index === 3 ? 'Прочие SKU' : metric.name
     })),
-    {name: 'Расходы', unit: 'млн ₽', before: expenses[1], period: '9 мес. 2026', direction: 'lower',
+    {name: 'Расходы', unit: 'млн ₽', before: expenses[1], period: '9 мес. 2026', direction: 'lower', icon: 'wallet',
       points: expenses.map(value => ({value})), reportPeriods: ['9 мес. 2025', '9 мес. 2026']}
   ];
   return rows.map(metric => {
@@ -140,13 +142,15 @@ function comparisonTiles(metric) {
   const change = comparable ? (metric.current - metric.before) / Math.abs(metric.before) * 100 : null;
   const favorable = metric.direction === 'lower' ? change < 0 : change > 0;
   const tone = change === 0 || !metric.direction ? 'neutral' : favorable ? 'good' : 'bad';
-  const trend = change === null ? '' : `<span class="cmp-trend cmp-trend-${tone}" aria-label="${tone === 'good' ? 'Улучшение' : tone === 'bad' ? 'Ухудшение' : 'Изменение'}, ${fmt(change)}%"><span aria-hidden="true">${change > 0 ? '↗' : change < 0 ? '↘' : '→'}</span> ${change > 0 ? '+' : ''}${fmt(change)}%</span>`;
-  const tile = (label, value, note, period) => `<div class="panel cmp-tile"><dt>${label}</dt>
+  const trend = change === null ? '' : change === 0
+    ? '<span class="cmp-trend cmp-trend-neutral" title="Без изменений" aria-label="Без изменений">—</span>'
+    : `<span class="cmp-trend cmp-trend-${tone}" aria-label="${tone === 'good' ? 'Улучшение' : tone === 'bad' ? 'Ухудшение' : 'Изменение'}, ${fmt(change)}%"><span aria-hidden="true">${change > 0 ? '↗' : '↘'}</span> ${change > 0 ? '+' : ''}${fmt(change)}%</span>`;
+  const tile = (label, value, note, period) => `<div class="panel cmp-tile" role="group" aria-label="${label} · ${safe(metric.name)}"><dt title="${safe(metric.name)}">${window.avIcon(metric.icon)}<span>${safe(metric.shortName || metric.name)}</span></dt>
     <dd>${Number.isFinite(value) ? fmt(value) : 'НД'}</dd>
     <dd class="cmp-period"${period ? ` title="${safe(period)}"` : ''}>${note}</dd></div>`;
   return `<dl class="cmp-values">
     ${tile('База', metric.before, metric.period || '')}
-    ${tile(metric.currentPeriod ? 'Сейчас · ' + metric.currentPeriod : 'Сейчас', metric.current, trend, metric.currentPeriod)}
+    ${tile('Сейчас', metric.current, trend + (metric.currentPeriod ? `<span class="cmp-tile-date">${safe(metric.currentPeriod)}</span>` : ''), metric.currentPeriod)}
   </dl>`;
 }
 
@@ -169,6 +173,7 @@ function renderComparison() {
     <div class="cmp-context"><span>${comparisonPeriods.find(([id]) => id === comparisonPeriod)[2]}</span></div>`;
   return '<section class="panel cmp-controls" aria-label="Настройки сравнения">' + switcher + context + '</section>'
     + (chart ? '<h2 class="cmp-section-title">Динамика и сравнение показателей</h2>' + chartSwitcher : '')
+    + (chart ? '' : '<div class="cmp-column-head"><span>База</span><span>Сейчас</span></div>')
     + '<div class="cmp-list">' + cards + '</div>'
     + `<details class="panel cmp-details"><summary>Источники и методика</summary>
       <p>Выручка на графиках — январь–сентябрь, ОФР. Текучесть — годовые данные 1С. Срез SKU аттракционов — 02.11.2026. Шкала начинается с 2024 года, первого года доступной отчётности. НД — нет данных.</p>
