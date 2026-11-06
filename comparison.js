@@ -146,7 +146,7 @@ function comparisonTiles(metric) {
     ? '<span class="cmp-trend cmp-trend-neutral" title="Без изменений" aria-label="Без изменений">—</span>'
     : `<span class="cmp-trend cmp-trend-${tone}" aria-label="${tone === 'good' ? 'Улучшение' : tone === 'bad' ? 'Ухудшение' : 'Изменение'}, ${fmt(change)}%"><span aria-hidden="true">${change > 0 ? '↗' : '↘'}</span> ${change > 0 ? '+' : ''}${fmt(change)}%</span>`;
   const tile = (label, value, note, period) => `<div class="panel cmp-tile" role="group" aria-label="${label} · ${safe(metric.name)}"><dt title="${safe(metric.name)}">${window.avIcon(metric.icon)}<span>${safe(metric.shortName || metric.name)}</span></dt>
-    <dd>${Number.isFinite(value) ? fmt(value) : 'НД'}</dd>
+    <dd>${Number.isFinite(value) ? `${fmt(value)} <span class="cmp-unit">${safe(metric.unit)}</span>` : 'НД'}</dd>
     <dd class="cmp-period"${period ? ` title="${safe(period)}"` : ''}>${note}</dd></div>`;
   return `<dl class="cmp-values">
     ${tile('База', metric.before, metric.period || '')}
@@ -166,7 +166,7 @@ function renderComparison() {
     <button type="button" data-chart-view="timeline" aria-pressed="${!periodView}">Хронология</button></div>` : '';
   const legend = chart && !periodView ? `<div class="cmp-legend"><span><i></i>Приход · 01.11.26</span><span><i></i>Сегодня · ${today.split('-').reverse().join('.')}</span></div>` : '';
   const metrics = comparisonData();
-  const cards = (chart ? metrics : comparisonTableData(metrics)).map((metric, index) => `<section class="${chart ? 'panel cmp-card' : 'cmp-card cmp-pair'}${periodView ? ' cmp-period-card' : ''}"><h2>${metric.name}, <span>${metric.unit}</span></h2>
+  const cards = (chart ? metrics : comparisonTableData(metrics)).map((metric, index) => `<section class="${chart ? 'panel cmp-card' : 'cmp-pair'}${periodView ? ' cmp-period-card' : ''}" aria-label="${safe(metric.name)}">${chart ? `<h2>${metric.name}, <span>${metric.unit}</span></h2>` : ''}
     ${chart ? (periodView ? periodGraph(metric, index) : comparisonGraph(metric, today)) : comparisonTiles(metric)}</section>`).join('');
   const context = chart ? legend : `<label class="cmp-period-control" for="cmp-period-select">Период сравнения
     <select id="cmp-period-select">${comparisonPeriods.map(([id, label]) => `<option value="${id}"${id === comparisonPeriod ? ' selected' : ''}>${label}</option>`).join('')}</select></label>

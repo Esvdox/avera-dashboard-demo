@@ -13,16 +13,16 @@
 #avera-owner .cmp-card{display:grid;grid-template-rows:22px 102px;gap:3px;padding:14px;margin:0}
 #avera-owner .cmp-card h2{font-size:15px;line-height:22px;margin:0}
 #avera-owner .cmp-card h2 span{color:var(--muted);font-weight:500}
-#avera-owner .cmp-pair{grid-template-rows:22px auto;gap:6px;padding:0}
-#avera-owner .cmp-pair h2{padding-inline:2px}
+#avera-owner .cmp-pair{min-width:0}
 #avera-owner .cmp-values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0;font-variant-numeric:tabular-nums}
 #avera-owner .cmp-column-head{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding-bottom:8px;font-size:12px;font-weight:650;color:var(--muted)}
 #avera-owner .cmp-column-head span{padding-inline:14px}
-#avera-owner .cmp-tile{display:grid;grid-template-rows:15px 22px 14px;align-content:center;gap:2px;min-height:92px;padding:10px 14px}
+#avera-owner .cmp-tile{display:grid;grid-template-rows:16px 27px 15px;align-content:center;gap:2px;min-height:84px;padding:9px 12px}
 #avera-owner .cmp-values dt{display:flex;align-items:center;gap:5px;min-width:0;font-size:12px;color:var(--muted);white-space:nowrap}
 #avera-owner .cmp-values dt svg{width:14px;height:14px;flex:none}
 #avera-owner .cmp-values dt span{overflow:hidden;text-overflow:ellipsis}
-#avera-owner .cmp-values dd{font-size:var(--text-value);font-weight:700;line-height:22px;margin:0;white-space:nowrap}
+#avera-owner .cmp-values dd{font-size:22px;font-weight:700;line-height:27px;margin:0;white-space:nowrap}
+#avera-owner .cmp-unit{font-size:11px;font-weight:500;color:var(--muted)}
 #avera-owner .cmp-values dd.cmp-period{display:flex;gap:5px;align-items:center;min-width:0;font-size:11px;font-weight:400;line-height:14px;color:var(--muted)}
 #avera-owner .cmp-tile-date{overflow:hidden;text-overflow:ellipsis}
 #avera-owner .cmp-period-control{display:grid;gap:4px;margin-bottom:7px;font-size:12px;color:var(--muted)}
