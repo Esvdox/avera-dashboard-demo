@@ -40,6 +40,7 @@
 #avera-owner .cmp-plot-grid path{fill:none;stroke:var(--line);stroke-dasharray:2 3}
 #avera-owner .cmp-plot-grid text{fill:var(--muted)}
 #avera-owner .cmp-plot-axis{fill:none;stroke:var(--muted)}
+#avera-owner .cmp-start-baseline{fill:none;stroke:var(--muted);stroke-width:1.5;stroke-dasharray:5 4}
 #avera-owner .cmp-period-trace{fill:none;stroke:var(--accent);stroke-width:2;stroke-dasharray:5 4;stroke-linecap:round}
 #avera-owner .cmp-period-graph .cmp-axis-date{fill:var(--muted)}
 #avera-owner .cmp-series-a{color:var(--accent)}

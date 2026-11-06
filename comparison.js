@@ -21,7 +21,7 @@ function comparisonData() {
   return [
     {name: 'Выручка', unit: 'млн ₽', before: revenue[1].value, period: '9 мес. 2026', points: revenue},
     {name: 'Текучесть', unit: '%', before: turnover[1]?.value, period: '2025', points: turnover},
-    {name: 'Аттракционы', unit: 'SKU', before: baseline.items.length, period: baseline.asOf, points: [{date: start, value: baseline.items.length}]},
+    {name: 'Аттракционы', unit: 'SKU', startBaseline: baseline.items.length, points: [{date: start, value: baseline.items.length}]},
     {name: 'Прочие продукты', unit: 'SKU', points: []},
     {name: 'Сделки', unit: 'шт.', points: []},
     {name: 'Маржа сделок', unit: '%', points: []}
@@ -35,7 +35,7 @@ function comparisonGraph(metric, todayDate) {
   const today = Date.parse(todayDate);
   const end = Math.max(today, arrival);
   const x = date => 10 + (date - start) / (end - start) * 300;
-  const maximum = Math.max(1, ...points.map(point => point.value));
+  const maximum = Math.max(1, metric.startBaseline ?? 0, ...points.map(point => point.value));
   const y = value => 87 - value / maximum * 59;
   const locations = points.map(point => [x(Date.parse(point.date)), y(point.value)]);
   const labels = points.map((point, index) => {
@@ -44,12 +44,15 @@ function comparisonGraph(metric, todayDate) {
       <text x="${px}" y="${py - 7}" text-anchor="middle" fill="var(--text)">${fmt(point.value)}</text>`;
   }).join('');
   const trace = locations.length > 1 ? `<polyline points="${locations.map(pair => pair.join(',')).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3"/>` : '';
+  const baseline = Number.isFinite(metric.startBaseline)
+    ? `<path class="cmp-start-baseline" d="M10 ${y(metric.startBaseline)}H310"/><text x="12" y="${y(metric.startBaseline) - 7}" fill="currentColor">Старт · ${fmt(metric.startBaseline)} SKU</text>`
+    : '';
   const accessibleData = points.map(point => point.date + ' — ' + fmt(point.value)).join('. ');
   return `<svg class="cmp-graph" viewBox="0 0 320 102" role="img" aria-label="${safe(metric.name + ', ' + metric.unit + '. ' + (accessibleData || 'НД'))}">
     <path d="M10 30H310 M10 58H310 M10 87H310" stroke="var(--line)" fill="none"/>
     <line x1="${x(arrival)}" x2="${x(arrival)}" y1="12" y2="87" stroke="var(--accent)" stroke-width="2"/>
     <line x1="${x(today)}" x2="${x(today)}" y1="12" y2="87" stroke="currentColor" stroke-dasharray="3 3"/>
-    ${trace}${labels}${points.length ? '' : '<text x="160" y="55" text-anchor="middle" fill="currentColor">НД</text>'}
+    ${baseline}${trace}${labels}${points.length ? '' : '<text x="160" y="55" text-anchor="middle" fill="currentColor">НД</text>'}
     <text x="10" y="100" fill="currentColor">2024</text>
     <text x="310" y="100" fill="currentColor" text-anchor="end">${todayDate.slice(0, 4)}</text>
   </svg>`;
@@ -60,7 +63,7 @@ function periodGraph(metric, index) {
     {letter: 'А', point: metric.points.at(-1), className: 'cmp-series-a', x: 320},
     {letter: 'Б', point: metric.points.length > 1 ? metric.points.at(-2) : null, className: 'cmp-series-b', x: 56}
   ].filter(series => Number.isFinite(series.point?.value));
-  const maximum = Math.max(1, ...periods.map(series => series.point.value));
+  const maximum = Math.max(1, metric.startBaseline ?? 0, ...periods.map(series => series.point.value));
   const stepSize = 10 ** Math.floor(Math.log10(maximum / 3));
   const step = Math.ceil(maximum / (3 * stepSize)) * stepSize;
   const bottom = 176;
@@ -96,11 +99,17 @@ function periodGraph(metric, index) {
     if (index === 1) return year + ' год';
     return date.split('-').reverse().join('.');
   };
-  const legend = ordered.map(series => `<li class="${series.className}"><i aria-hidden="true"></i>Период ${series.letter} · ${label(series.point.date)}</li>`).join('');
+  const startLegend = Number.isFinite(metric.startBaseline)
+    ? `<li class="cmp-series-b"><i aria-hidden="true"></i>Старт · ${fmt(metric.startBaseline)} SKU</li>`
+    : '';
+  const baseline = startLegend
+    ? `<path class="cmp-start-baseline" d="M56 ${y(metric.startBaseline)}H320"/><text class="cmp-axis-date" x="56" y="194" text-anchor="middle">Старт</text>`
+    : '';
+  const legend = startLegend + ordered.map(series => `<li class="${series.className}"><i aria-hidden="true"></i>Период ${series.letter} · ${label(series.point.date)}</li>`).join('');
   const accessible = periods.map(series => `Период ${series.letter}, ${label(series.point.date)}, ${fmt(series.point.value)}`).join('. ');
   return periods.length
     ? `<svg class="cmp-period-graph" viewBox="0 0 346 202" role="img" aria-label="${safe(metric.name + ', ' + metric.unit + '. ' + accessible)}">
-        <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M56 20V176H320"/>${trace}${marks}
+        <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M56 20V176H320"/>${baseline}${trace}${marks}
       </svg><ul class="cmp-series-legend">${legend}</ul>`
     : '<div class="cmp-period-empty">НД</div>';
 }
