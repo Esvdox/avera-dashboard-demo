@@ -56,8 +56,8 @@ function comparisonGraph(metric, todayDate) {
 
 function periodGraph(metric, index) {
   const periods = [
-    {letter: 'А', point: metric.points.at(-1), className: 'cmp-series-a', x: 120},
-    {letter: 'Б', point: metric.points.length > 1 ? metric.points.at(-2) : null, className: 'cmp-series-b', x: 241}
+    {letter: 'А', point: metric.points.at(-1), className: 'cmp-series-a', x: 241},
+    {letter: 'Б', point: metric.points.length > 1 ? metric.points.at(-2) : null, className: 'cmp-series-b', x: 120}
   ].filter(series => Number.isFinite(series.point?.value));
   const maximum = Math.max(1, ...periods.map(series => series.point.value));
   const stepSize = 10 ** Math.floor(Math.log10(maximum / 3));
@@ -67,10 +67,20 @@ function periodGraph(metric, index) {
     const value = tick * step;
     return `<path d="M39 ${y(value)}H307"/><text x="32" y="${y(value) + 3}" text-anchor="end">${fmt(value)}</text>`;
   }).join('');
+  const ordered = [...periods].reverse();
+  const coordinates = ordered.map(series => [series.x, y(series.point.value)]);
+  const comparisonLine = coordinates.map(pair => pair.join(',')).join(' ');
+  const first = coordinates[0];
+  const last = coordinates.at(-1);
+  const trace = coordinates.length > 1
+    ? `<polygon class="cmp-period-fill" points="${first[0]},163 ${comparisonLine} ${last[0]},163"/>
+       <polyline class="cmp-period-trace" points="${comparisonLine}"/>`
+    : '';
   const marks = periods.map(series => {
     const py = y(series.point.value);
-    return `<g class="${series.className}"><circle cx="${series.x}" cy="${py}" r="4"/><text x="${series.x}" y="${py - 9}" text-anchor="middle">${fmt(series.point.value)}</text>
-      <text x="${series.x}" y="181" text-anchor="middle">${series.letter}</text></g>`;
+    const x = series.x;
+    return `<g class="${series.className}"><circle cx="${x}" cy="${py}" r="4"/><text x="${x}" y="${py - 9}" text-anchor="middle">${fmt(series.point.value)}</text>
+      <text x="${x}" y="181" text-anchor="middle">${series.letter}</text></g>`;
   }).join('');
   const label = date => {
     const year = date.slice(0, 4);
@@ -82,7 +92,7 @@ function periodGraph(metric, index) {
   const accessible = periods.map(series => `Период ${series.letter}, ${label(series.point.date)}, ${fmt(series.point.value)}`).join('. ');
   return periods.length
     ? `<svg class="cmp-period-graph" viewBox="0 0 320 188" role="img" aria-label="${safe(metric.name + ', ' + metric.unit + '. ' + accessible)}">
-        <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M39 27V163H307"/>${marks}
+        <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M39 27V163H307"/>${trace}${marks}
       </svg><ul class="cmp-series-legend">${legend}</ul>`
     : '<div class="cmp-period-empty">НД</div>';
 }

@@ -28,6 +28,8 @@
 #avera-owner .cmp-plot-grid path{fill:none;stroke:var(--line);stroke-dasharray:2 3}
 #avera-owner .cmp-plot-grid text{fill:var(--muted)}
 #avera-owner .cmp-plot-axis{fill:none;stroke:var(--muted)}
+#avera-owner .cmp-period-fill{fill:var(--accent);fill-opacity:.16}
+#avera-owner .cmp-period-trace{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-dasharray:6 4;stroke-linecap:round}
 #avera-owner .cmp-series-a{color:var(--accent)}
 #avera-owner .cmp-series-b{color:var(--text)}
 #avera-owner .cmp-period-graph g[class^="cmp-series"]{fill:currentColor}
