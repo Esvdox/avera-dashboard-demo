@@ -23,6 +23,11 @@ function comparisonData() {
   }));
   const start = baseline.asOf.split('.').reverse().join('-');
   const staffing = metrics.staffing();
+  const shortLoans = metrics.balanceSeries('1510');
+  const loans = metrics.balanceSeries('1410').map((row, i) => {
+    const short = shortLoans[i]?.value;
+    return {...row, value: Number.isFinite(row.value) && Number.isFinite(short) ? (row.value + short) / 1000 : null};
+  });
   const staffingMetrics = [
     ['Предусмотрено','planned'], ['Занято','occupied'], ['Вакантно','vacant']
   ].map(([name,key]) => ({name: name + ' по ШР', unit: 'ставки', icon: 'people',
@@ -39,6 +44,7 @@ function comparisonData() {
     {name: 'Выручка за год', unit: 'млн ₽', icon: 'wallet', comparable: true, points: annualRevenue},
     {name: 'Кредиторская задолженность', unit: 'млн ₽', icon: 'wallet', direction: 'lower', comparableSnapshots: true,
       points: metrics.balanceSeries('1520').map(r=>({...r,value:Number.isFinite(r.value)?r.value/1000:null}))},
+    {name: 'Остаток займов по балансу', unit: 'млн ₽', icon: 'wallet', comparableSnapshots: true, discrete: true, points: loans},
     ...staffingMetrics
   ];
 }

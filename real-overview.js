@@ -107,6 +107,7 @@ window.ownerOverview = function () {
   const nineMonths = code => points(['2025-09-30','2026-09-30'],['9 мес. 2025','9 мес. 2026'],finance.incomeNine,code);
   const revenue = nineMonths('2110');
   const profit = nineMonths('2400');
+  const annualProfit = points(['2024-12-31','2025-12-31'],['2024 (сравн.)','2025'],finance.incomeAnnual,'2400');
   const debt = window.AVERA_METRICS.balanceSeries('1520').filter(r=>inRange(r.date)&&Number.isFinite(r.value)).map(r=>[r.date.split('-').reverse().join('.')+(r.date==='2024-12-31'?'²':''),r.value,r.date]);
   const changeLabel = (series, direction, format, unit, context = '') => {
     if (series.length < 2) return '';
@@ -126,7 +127,11 @@ window.ownerOverview = function () {
     '</div>' + (from && to && from<=to ? '' : '<p class="av-muted">Укажите корректный диапазон дат.</p>') + '</div>';
   return controls + '<section class="av-grid av-owner-kpis" aria-label="Показатели компании">' + [
     financeCard('wallet','Выручка',revenue,financialChart('revenue',revenue),1),
-    financeCard('trend','Чистая прибыль',profit,financialChart('profit',profit),1,profit.length > 1 && profit[0][1]<0 && profit.at(-1)[1]>0 ? ' · выход в прибыль' : ''),
+    financeCard('trend','Чистая прибыль',profit.length ? profit : annualProfit,
+      (profit.length ? financialChart('profit',profit) : '') +
+      (annualProfit.length ? '<p class="av-muted">Годовой ОФР · млн ₽</p>' + financialChart('annual-profit',annualProfit) : '') +
+      (!profit.length && !annualProfit.length ? missing : ''),1,
+      profit.length > 1 && profit[0][1]<0 && profit.at(-1)[1]>0 ? ' · выход в прибыль' : ''),
     card('sales','Средняя маржинальность сделок','НД','Нет подтверждённого среза CRM','sales',missing),
     financeCard('wallet','Кредиторская задолженность',debt,financialChart('debt',debt),-1,'',false),
     card('people','Штатные ставки',staffing?staffingNumber(staffing.planned)+' / '+staffingNumber(staffing.occupied):'НД',
