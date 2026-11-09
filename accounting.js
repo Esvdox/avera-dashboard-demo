@@ -36,7 +36,7 @@ window.AVERA_ACCOUNTING={
 };
 window.renderAccounting=function(){
   const d=window.AVERA_ACCOUNTING;
-  const n=v=>Number.isFinite(v)?v.toLocaleString('ru-RU',{minimumFractionDigits:3,maximumFractionDigits:3}):'НД';
+  const n=v=>Number.isFinite(v)?v.toLocaleString('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2}):'НД';
   const m=v=>Number.isFinite(v)?n(v/1000):'НД';
   const rows=a=>a.map(r=>[r[0],r[1],...r.slice(2).map(m)]);
   const f=window.AVERA_METRICS.finance();

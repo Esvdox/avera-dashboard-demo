@@ -23,11 +23,11 @@ function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
   const tickStep = Math.ceil(span / (4 * step)) * step;
   const low = Math.floor(minimum / tickStep) * tickStep;
   const high = Math.max(tickStep, Math.ceil(maximum / tickStep) * tickStep);
-  const y = value => 18 + (high - value) / (high - low) * 136;
+  const y = value => 28 + (high - value) / (high - low) * 126;
   const zero = y(0);
   const color = value => value < 0 ? 'var(--av-profit-loss)' : 'var(--accent)';
   const marks = points.map(([label, value], i) => ({
-    label, value, x: points.length === 1 ? 224 : 88 + i * 268 / (points.length - 1), y: y(value)
+    label, value, x: points.length === 1 ? 224 : 111 + i * 235 / (points.length - 1), y: y(value)
   }));
   const first = marks[0];
   const last = marks.at(-1);
@@ -45,14 +45,14 @@ function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
     '<clipPath id="' + clip('down') + '"><rect y="' + zero + '" width="420" height="' + (190 - zero) + '"/></clipPath></defs>' +
     ['up', 'down'].map((side, i) => '<g clip-path="url(#' + clip(side) + ')" color="' + color(i ? -1 : 1) +
       '"><path d="' + area + '" fill="currentColor" opacity=".25"/><path d="' + curve + '" fill="none" stroke="currentColor" stroke-width="2.5"/></g>').join('');
-  return '<svg class="av-profit-chart" viewBox="0 0 420 190" role="img" aria-label="' +
+  return '<svg class="av-profit-chart" viewBox="0 0 420 198" role="img" aria-label="' +
     safe(unit + '. ' + marks.map(mark => mark.label + ': ' + format(mark.value)).join('. ')) + '">' +
-    ticks.map(value => '<path d="M65 ' + y(value) + 'H392" class="av-kpi-gridline"/><text x="59" y="' +
+    ticks.map(value => '<path d="M65 ' + y(value) + 'H392" class="av-kpi-gridline"/><text x="53" y="' +
       (y(value) + 4) + '" text-anchor="end">' + safe(fmt(value)) + '</text>').join('') + traces +
-    '<path d="M65 18V154 M65 ' + zero + 'H392" class="av-profit-axis"/>' +
+    '<path d="M65 28V154 M65 ' + zero + 'H392" class="av-profit-axis"/>' +
     marks.map(mark => '<circle cx="' + mark.x + '" cy="' + mark.y + '" r="3.5" fill="' + color(mark.value) +
-      '"/><text x="' + mark.x + '" y="' + (mark.y - 8) + '" fill="' + color(mark.value) + '" text-anchor="middle">' +
-      safe(format(mark.value)) + '</text><text x="' + mark.x + '" y="177" text-anchor="middle">' + safe(mark.label) + '</text>').join('') +
+      '"/><text x="' + mark.x + '" y="' + (mark.y - 16) + '" fill="' + color(mark.value) + '" text-anchor="middle">' +
+      safe(format(mark.value)) + '</text><text x="' + mark.x + '" y="184" text-anchor="middle">' + safe(mark.label) + '</text>').join('') +
     '</svg>';
 }
 

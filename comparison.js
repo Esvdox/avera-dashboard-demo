@@ -99,7 +99,7 @@ function periodGraph(metric, index, axis, width) {
   const y = value => bottom - (value / (step * topTick)) * 156;
   const grid = Array.from({length: topTick + 1}, (_, tick) => {
     const value = tick * step;
-    return `<path d="M${left} ${y(value)}H${right}"/><text x="${left - 7}" y="${y(value) + 3}" text-anchor="end">${fmt(value)}${metric.unit === '%' ? '%' : ''}</text>`;
+    return `<path d="M${left} ${y(value)}H${right}"/><text x="${left - 14}" y="${y(value) + 3}" text-anchor="end">${fmt(value)}${metric.unit === '%' ? '%' : ''}</text>`;
   }).join('');
   const ordered = periods.filter(series => !series.point.partial);
   const coordinates = ordered.map(series => [series.x, y(series.point.value)]);
@@ -118,12 +118,12 @@ function periodGraph(metric, index, axis, width) {
     const py = y(series.point.value);
     const x = series.x;
     const alignLeft = x < (left + right) / 2;
-    const labelX = x + (alignLeft ? 7 : -7);
+    const labelX = x + (alignLeft ? 14 : -14);
     const previous = periods[i - 1];
     const close = previous && x - previous.x < 65 && Math.abs(py - y(previous.point.value)) < 24;
     const labelY = close && i % 2
-      ? (py < y(previous.point.value) ? Math.max(12, py - 23) : Math.min(175, py + 15))
-      : py - 9;
+      ? (py < y(previous.point.value) ? Math.max(12, py - 32) : Math.min(175, py + 15))
+      : py - 18;
     return `<g class="${series.className}"><circle cx="${x}" cy="${py}" r="3"/><text class="cmp-point-label" x="${labelX}" y="${labelY}" text-anchor="${alignLeft ? 'start' : 'end'}">${fmt(series.point.value)}${metric.unit === '%' ? '%' : ''}</text></g>`;
   }).join('');
   const label = date => {
