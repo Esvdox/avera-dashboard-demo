@@ -138,6 +138,12 @@ function periodGraph(metric, index, axis, width) {
     const color = i ? 'var(--cmp-loss)' : 'var(--accent)';
     return `<defs><clipPath id="${key}-clip"><rect x="${left}" y="${i ? zero : 20}" width="${right-left}" height="${i ? bottom-zero : zero-20}"/></clipPath><linearGradient id="${key}" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="${i ? bottom : 20}" y2="${zero}"><stop stop-color="${color}" stop-opacity=".34"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><g clip-path="url(#${key}-clip)"><path fill="url(#${key})" d="${area}"/><path class="cmp-period-trace" style="stroke:${color}" vector-effect="non-scaling-stroke" d="${curve}"/></g>`;
   }).join('') + arrivalArea : '';
+  const partialTrace = periods.map((series,i)=>{
+    if(!i || !(series.point.partial || periods[i-1].point.partial)) return '';
+    const previous=periods[i-1], x0=previous.x, x1=series.x;
+    const y0=y(previous.point.value), y1=y(series.point.value), third=(x1-x0)/3;
+    return `<path class="cmp-period-trace cmp-partial-trace" vector-effect="non-scaling-stroke" stroke-dasharray="4 4" d="M${x0} ${y0} C${x0+third} ${y0} ${x1-third} ${y1} ${x1} ${y1}"/>`;
+  }).join('');
   const marks = periods.map((series, i) => {
     const py = y(series.point.value);
     const x = series.x;
@@ -148,7 +154,7 @@ function periodGraph(metric, index, axis, width) {
     const labelY = close && i % 2
       ? (py < y(previous.point.value) ? Math.max(12, py - 32) : Math.min(175, py + 15))
       : py - 18;
-    return `<g class="${series.className}" style="color:${series.point.value < 0 ? 'var(--cmp-loss)' : 'var(--accent)'}"><circle cx="${x}" cy="${py}" r="3"/><text class="cmp-point-label ${series.point.value < 0 ? 'cmp-point-negative' : ''}" x="${labelX}" y="${labelY}" text-anchor="${alignLeft ? 'start' : 'end'}">${fmt(series.point.value)}${metric.unit === '%' ? '%' : ''}</text></g>`;
+    return `<g class="${series.className}" style="color:${series.point.value < 0 ? 'var(--cmp-loss)' : 'var(--accent)'}"><circle cx="${x}" cy="${py}" r="3"/><text class="cmp-point-label ${series.point.value < 0 ? 'cmp-point-negative' : ''}" x="${labelX}" y="${labelY}" text-anchor="${alignLeft ? 'start' : 'end'}">${series.point.periodLabel ? series.point.date.slice(0,4) + ' · ' : ''}${fmt(series.point.value)}${metric.unit === '%' ? '%' : ''}</text></g>`;
   }).join('');
   const label = date => {
     const year = date.slice(0, 4);
@@ -187,7 +193,7 @@ function periodGraph(metric, index, axis, width) {
       <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M${left} 20V176 M${left} ${zero}H${right}"/>
       ${arrivalFill}${baseline}${trace}${coordinates.length < 2 || last[0] <= arrivalX ? arrivalArea : ''}${arrivalLine}
       <path class="cmp-today-line" d="M${dateX(axis.today)} 20V176"/>
-      ${contextPoints}${marks}${tickLabels}
+      ${contextPoints}${marks}${partialTrace}${tickLabels}
       ${periods.length ? '' : `<text class="cmp-axis-date" x="${rangeX + rangeWidth / 2}" y="94" text-anchor="middle">НД в выбранном диапазоне</text>`}
     </svg>${legend ? `<ul class="cmp-series-legend">${legend}</ul>` : ''}`;
 }
