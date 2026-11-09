@@ -144,6 +144,14 @@ function periodGraph(metric, index, axis, width) {
     const y0=y(previous.point.value), y1=y(series.point.value), third=(x1-x0)/3;
     return `<path class="cmp-period-trace cmp-partial-trace" vector-effect="non-scaling-stroke" stroke-dasharray="4 4" d="M${x0} ${y0} C${x0+third} ${y0} ${x1-third} ${y1} ${x1} ${y1}"/>`;
   }).join('');
+  const secondaryPoints = (metric.secondaryPoints || []).filter(p=>Number.isFinite(p.value) && Date.parse(p.date)>=selectedStart && Date.parse(p.date)<=selectedEnd).sort((a,b)=>a.date.localeCompare(b.date));
+  const secondaryCoordinates = secondaryPoints.map(p=>[dateX(Date.parse(p.date)),y(p.value)]);
+  const secondaryCurve = secondaryCoordinates.map(([x,py],i)=>{
+    if(!i) return 'M'+x+' '+py;
+    const [px,yp]=secondaryCoordinates[i-1], third=(x-px)/3;
+    return 'C'+(px+third)+' '+yp+' '+(x-third)+' '+py+' '+x+' '+py;
+  }).join(' ');
+  const secondaryTrace = secondaryCoordinates.length ? '<g class="cmp-occupied-series">' + (secondaryCoordinates.length>1 ? '<path class="cmp-period-trace" vector-effect="non-scaling-stroke" stroke-dasharray="4 4" d="'+secondaryCurve+'"/>' : '') + secondaryCoordinates.map(([x,py],i)=>'<circle cx="'+x+'" cy="'+py+'" r="3" fill="var(--surface)" stroke="var(--accent)"/><text class="cmp-point-label" x="'+(x-12)+'" y="'+Math.min(188,py+19)+'" text-anchor="end">'+fmt(secondaryPoints[i].value)+'</text>').join('')+'</g>' : '';
   const marks = periods.map((series, i) => {
     const py = y(series.point.value);
     const x = series.x;
@@ -176,7 +184,7 @@ function periodGraph(metric, index, axis, width) {
       <path class="cmp-start-baseline" d="M${left} ${baselineY}H${right}"/>`
     : '';
   const seriesLabel = series => series.point.label || 'Срез';
-  const legend = startLegend + (ordered.length > 1
+  const legend = metric.secondaryPoints ? '<li>━ Предусмотрено по ШР</li><li>┄ Занятые ставки</li>' : startLegend + (ordered.length > 1
     ? `<li class="cmp-series-a cmp-series-range"><i aria-hidden="true"></i>Период · ${label(ordered[0].point.date)} → ${label(ordered.at(-1).point.date)}</li>`
     : ordered.map(series => `<li class="${series.className}"><i aria-hidden="true"></i>${seriesLabel(series)} · ${label(series.point.date)}</li>`).join(''))
     + observations.filter(point => point.partial).map(point => `<li>${safe(point.periodLabel)} · ${fmt(point.value)}%</li>`).join('');
@@ -193,7 +201,7 @@ function periodGraph(metric, index, axis, width) {
       <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M${left} 20V176 M${left} ${zero}H${right}"/>
       ${arrivalFill}${baseline}${trace}${coordinates.length < 2 || last[0] <= arrivalX ? arrivalArea : ''}${arrivalLine}
       <path class="cmp-today-line" d="M${dateX(axis.today)} 20V176"/>
-      ${contextPoints}${marks}${partialTrace}${tickLabels}
+      ${contextPoints}${marks}${partialTrace}${secondaryTrace}${tickLabels}
       ${periods.length ? '' : `<text class="cmp-axis-date" x="${rangeX + rangeWidth / 2}" y="94" text-anchor="middle">НД в выбранном диапазоне</text>`}
     </svg>${legend ? `<ul class="cmp-series-legend">${legend}</ul>` : ''}`;
 }
@@ -251,7 +259,7 @@ function renderComparison() {
   const datesValid = from && to && from <= to;
   const plotWidth = Math.max(240, $('#content').clientWidth - 30);
   const axis = chart && datesValid ? comparisonAxis(plotWidth, from, to) : null;
-  const visibleMetrics = chart ? metrics : comparisonTableData(metrics);
+  const visibleMetrics = chart ? metrics.filter(m=>!['Занято по ШР','Вакантно по ШР'].includes(m.name)).map(m=>m.name==='Предусмотрено по ШР' ? {...m,name:'Штатное расписание',secondaryPoints:metrics.find(r=>r.name==='Занято по ШР').points} : m) : comparisonTableData(metrics);
   const cards = visibleMetrics.map((metric, index) => `<section class="${chart ? 'panel cmp-card cmp-period-card' : 'cmp-pair'}" aria-label="${safe(metric.name)}">${chart ? `<h2>${metric.name}, <span>${metric.unit}</span></h2>` : ''}
     ${chart ? (axis ? periodGraph(metric, index, axis, plotWidth) : '<div class="cmp-period-empty">НД</div>') : comparisonTiles(metric)}</section>`).join('');
 

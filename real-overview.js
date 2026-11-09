@@ -140,9 +140,9 @@ window.ownerOverview = function () {
       profit.length > 1 && profit[0][1]<0 && profit.at(-1)[1]>0 ? ' · выход в прибыль' : ''),
     card('sales','Средняя маржинальность сделок','НД','Нет подтверждённого среза CRM','sales',missing),
     financeCard('wallet','Кредиторская задолженность',debt,financialChart('debt',debt),-1,'',false),
-    card('people','Штатные ставки',staffing?staffingNumber(staffing.planned)+' / '+staffingNumber(staffing.occupied):'НД',
+    card('people','Штатное расписание',staffing?staffingNumber(staffing.planned)+' / '+staffingNumber(staffing.occupied):'НД',
       'План / занято'+(staffing?' · вакантно '+staffingNumber(staffing.vacant)+' · '+staffing.date.split('-').reverse().join('.') : ' · нет среза в периоде'),'people',
-      overviewChart('staffing',staffingSeries,'Занятые ставки',fmt,Math.max(0,...staffingHistory.map(row=>row.planned))),changeLabel(staffingSeries,0,fmt,'занятых ставок')),
+      typeof periodGraph === 'function' ? periodGraph({name:'Штатное расписание',unit:'ставки',points:staffingHistory.map(r=>({date:r.date,value:r.planned})),secondaryPoints:staffingHistory.map(r=>({date:r.date,value:r.occupied}))},100,comparisonAxis(Math.max(240,$('#content').clientWidth-34),from,to),Math.max(240,$('#content').clientWidth-34)) : missing,changeLabel(staffingSeries,0,fmt,'занятых ставок')),
     card('products','Готовность КД',products?products.complete+' из '+products.count+' SKU':'НД',
       products?'КД на 100% · '+kdDate:'Нет среза в выбранном периоде','products',
       products && products.count ? overviewChart('kd',[[kdDate,products.complete/products.count*100,date(kdDate)]],'Доля SKU с КД на 100%', value => fmt(value)+'%',100) : missing)
