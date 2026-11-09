@@ -11,6 +11,8 @@ function card(icon, label, value, note, route, chart, change = '') {
 }
 
 const overviewRange = {from: '2025-09-30', to: new Intl.DateTimeFormat('sv-SE', {timeZone:'Europe/Moscow'}).format(new Date())};
+const arrivalDate = Date.parse('2026-10-26');
+const arrivalLabel = 'Начало периода управления · 26.10.2026';
 const missing = '<p class="av-muted">Нет данных за выбранный период</p>';
 
 function overviewTimeTicks(start, end, count) {
@@ -67,8 +69,8 @@ function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
   let curve = 'M' + first.x + ' ' + first.y;
   marks.slice(1).forEach((mark, i) => {
     const previous = marks[i];
-    const middle = (previous.x + mark.x) / 2;
-    curve += ' C' + middle + ' ' + previous.y + ' ' + middle + ' ' + mark.y + ' ' + mark.x + ' ' + mark.y;
+    const third = (mark.x - previous.x) / 3;
+    curve += ` C${previous.x + third} ${previous.y} ${mark.x - third} ${mark.y} ${mark.x} ${mark.y}`;
   });
   const area = curve + ' V' + zero + ' H' + first.x + ' Z';
   const ticks = Array.from({length: Math.round((high - low) / tickStep) + 1}, (_, i) => (low + i * tickStep));
@@ -84,13 +86,34 @@ function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
       '" stop-opacity="0"/></linearGradient></defs><g clip-path="url(#' + key + ')"><path d="' +
       area + '" fill="url(#' + key + '-fill)"/><path d="' + curve + '" fill="none" stroke="' + shade + '" stroke-width="1.5" vector-effect="non-scaling-stroke"/></g>';
   }).join('');
+  const showArrival = start <= arrivalDate && arrivalDate <= end;
+  let management = '';
+  if (showArrival) {
+    const arrivalX = x(arrivalDate);
+    const exact = marks.find(mark => mark.x === arrivalX);
+    const after = marks.findIndex(mark => mark.x > arrivalX);
+    let arrivalY = exact?.y;
+    if (arrivalY === undefined && after > 0) {
+      const previous = marks[after - 1];
+      const next = marks[after];
+      const t = (arrivalX - previous.x) / (next.x - previous.x);
+      arrivalY = previous.y + (next.y - previous.y) * t * t * (3 - 2 * t);
+    }
+    if (marks.length > 1 && last.x > arrivalX) {
+      const key = clip('management');
+      management += `<defs><clipPath id="${key}-clip"><rect x="${arrivalX}" y="28" width="${right - arrivalX}" height="148"/></clipPath><linearGradient id="${key}-fill" x2="0" y2="100%"><stop stop-color="var(--av-management)" stop-opacity=".38"/><stop offset="1" stop-color="var(--av-management)" stop-opacity=".12"/></linearGradient></defs><path d="${area}" fill="url(#${key}-fill)" clip-path="url(#${key}-clip)"/>`;
+    }
+    const marker = arrivalY === undefined ? `M${arrivalX} 28V176` : `M${arrivalX} ${zero}V${arrivalY}`;
+    const dash = arrivalY === undefined ? ' stroke-dasharray="3 4"' : '';
+    management += `<path class="av-management-marker" d="${marker}" fill="none" stroke="var(--av-management)" stroke-width="1.5" vector-effect="non-scaling-stroke"${dash}><title>${arrivalLabel}</title></path>`;
+  }
   return '<svg class="av-profit-chart" viewBox="0 0 ' + width + ' 202" role="img" aria-label="' +
-    safe(unit + '. ' + marks.map(mark => mark.label + ': ' + format(mark.value)).join('. ')) + '">' +
+    safe(unit + '. ' + marks.map(mark => mark.label + ': ' + format(mark.value)).join('. ') + (showArrival ? '. ' + arrivalLabel : '')) + '">' +
     ticks.map(value => '<path d="M' + left + ' ' + y(value) + 'H' + right + '" class="av-kpi-gridline"/><text class="' + (Math.abs(Math.round(value/tickStep))%2 ? 'av-kpi-minor-tick' : '') + '" x="42" y="' +
-      (y(value) + 4) + '" text-anchor="end">' + safe(fmt(value)) + '</text>').join('') + traces +
+      (y(value) + 4) + '" text-anchor="end">' + safe(fmt(value)) + '</text>').join('') + traces + management +
     '<path d="M' + left + ' 28V176 M' + left + ' ' + zero + 'H' + right + '" class="av-profit-axis"/>' +
     marks.map((mark, i) => '<circle cx="' + mark.x + '" cy="' + mark.y + '" r="3" stroke="' + color(mark.value) + '" fill="' + (i===0 && marks.length>1 ? 'var(--surface)' : color(mark.value)) +
-      '"/><text x="' + mark.x + '" y="' + mark.labelY + '" fill="' + color(mark.value) + '" text-anchor="middle">' +
+      '"/><text class="av-kpi-point-label" x="' + mark.x + '" y="' + mark.labelY + '" fill="' + color(mark.value) + '" text-anchor="middle">' +
       safe(format(mark.value)) + '</text>').join('') +
     ticksX.map(tick=>'<text x="'+x(tick.date)+'" y="194" text-anchor="middle">'+safe(tick.label)+'</text>').join('') +
     '</svg>';
