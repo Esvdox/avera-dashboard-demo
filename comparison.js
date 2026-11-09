@@ -4,7 +4,7 @@ tabs.splice(1, 0, ['comparison', 'Сравнение', 'Сравнение', '']
 window.avNavIcons.comparison = 'trend';
 
 let comparisonView = new URLSearchParams(location.search).get('view') === 'charts' ? 'chart' : 'table';
-const comparisonDates = {from: '2025-09-30', to: comparisonToday()};
+const comparisonDates = {from: '2024-01-01', to: comparisonToday()};
 
 function comparisonData() {
   const metrics = window.AVERA_METRICS;
@@ -37,6 +37,9 @@ function comparisonData() {
     {name: 'Сделки', unit: 'шт.', points: []},
     {name: 'Маржа сделок', unit: '%', points: []},
     {name: 'Выручка за год', unit: 'млн ₽', icon: 'wallet', comparable: true, points: annualRevenue},
+    {name: 'Кредиторская задолженность', unit: 'млн ₽', icon: 'wallet', direction: 'lower', comparableSnapshots: true,
+      note: '2024 — сравнительная колонка поздней отчётности; исходная версия отличается. Остатки на отчётные даты, не обороты.',
+      points: metrics.balanceSeries('1520').map(r=>({...r,value:Number.isFinite(r.value)?r.value/1000:null}))},
     ...staffingMetrics
   ];
 }
@@ -190,7 +193,7 @@ function comparisonTableData(metrics) {
   const rows = [
     ...metrics.map((metric, index) => ({
       ...metric,
-      direction: metric.discrete ? null : index === 1 ? 'lower' : index === 0 || index >= 4 ? 'higher' : null,
+      direction: metric.direction || (metric.discrete ? null : index === 1 ? 'lower' : index === 0 || index >= 4 ? 'higher' : null),
       comparableSnapshots: metric.comparableSnapshots || index <= 3 || metric.comparable,
       icon: metric.icon || ['wallet', 'people', 'products', 'products', 'sales', 'trend'][index],
       shortName: index === 3 ? 'Прочие SKU' : metric.name
@@ -236,7 +239,7 @@ function renderComparison() {
   const axis = chart && datesValid ? comparisonAxis(plotWidth, from, to) : null;
   const visibleMetrics = chart ? metrics : comparisonTableData(metrics);
   const cards = visibleMetrics.map((metric, index) => `<section class="${chart ? 'panel cmp-card cmp-period-card' : 'cmp-pair'}" aria-label="${safe(metric.name)}">${chart ? `<h2>${metric.name}, <span>${metric.unit}</span></h2>` : ''}
-    ${chart ? (axis ? periodGraph(metric, index, axis, plotWidth) : '<div class="cmp-period-empty">НД</div>') : comparisonTiles(metric)}</section>`).join('');
+    ${chart ? (axis ? periodGraph(metric, index, axis, plotWidth) : '<div class="cmp-period-empty">НД</div>') : comparisonTiles(metric)}${metric.note?'<p class="hint">'+safe(metric.note)+'</p>':''}</section>`).join('');
 
   const dateField = (key, label) => `<div class="cmp-date-field">
       <label for="cmp-snapshot-${key}">${label}</label>
@@ -251,7 +254,8 @@ function renderComparison() {
     : chart ? 'Голубая зона — выбранный диапазон. Точки — доступные срезы.' : 'НД — нет среза на выбранную дату.';
   const staffingDates=window.AVERA_METRICS.staffing();
   const staffingShortcut=staffingDates.length ? '<button type="button" class="secondary" data-staffing-dates>Срезы штатных ставок: '+staffingDates[0].date.split('-').reverse().join('.')+' → '+staffingDates.at(-1).date.split('-').reverse().join('.')+'</button>' : '';
-  const context = `${dates}${staffingShortcut}<div class="cmp-context" role="status"><span>${periodNote}</span></div>`;
+  const debtShortcut='<button type="button" class="secondary" data-debt-dates>Баланс: 31.12.2024 → 30.09.2026</button>';
+  const context = `${dates}${staffingShortcut}${debtShortcut}<div class="cmp-context" role="status"><span>${periodNote}</span></div>`;
   return '<section class="panel cmp-controls" aria-label="Настройки сравнения">' + switcher + context + '</section>'
     + (chart ? `<h2 class="cmp-section-title">Динамика и сравнение показателей</h2>
       <div class="cmp-time-key"><span>После прихода · 26.10.2026</span><span>Сегодня · ${comparisonToday().split('-').reverse().join('.')}</span></div>` : '')
@@ -276,6 +280,10 @@ $('#content').addEventListener('change', event => {
   $(`#${id}`).focus();
 });
 $('#content').addEventListener('click', event => {
+  if(event.target.closest('[data-debt-dates]') && current==='comparison'){
+    comparisonDates.from='2024-12-31';comparisonDates.to='2026-09-30';render();
+    return;
+  }
   if(event.target.closest('[data-staffing-dates]') && current==='comparison'){
     const rows=window.AVERA_METRICS.staffing();
     if(rows.length){comparisonDates.from=rows[0].date;comparisonDates.to=rows.at(-1).date;render();}

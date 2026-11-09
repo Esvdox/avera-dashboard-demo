@@ -10,7 +10,7 @@ function card(icon, label, value, note, route, chart, change = '') {
   </a>`;
 }
 
-const overviewRange = {from: '2025-09-30', to: new Intl.DateTimeFormat('sv-SE', {timeZone:'Europe/Moscow'}).format(new Date())};
+const overviewRange = {from: '2024-01-01', to: new Intl.DateTimeFormat('sv-SE', {timeZone:'Europe/Moscow'}).format(new Date())};
 const missing = '<p class="av-muted">Нет данных за выбранный период</p>';
 
 window.avTimeTicks = function (start, end, count) {
@@ -107,7 +107,7 @@ window.ownerOverview = function () {
   const nineMonths = code => points(['2025-09-30','2026-09-30'],['9 мес. 2025','9 мес. 2026'],finance.incomeNine,code);
   const revenue = nineMonths('2110');
   const profit = nineMonths('2400');
-  const debt = points(['2024-12-31','2025-12-31','2026-09-30'],['31.12.2024','31.12.2025','30.09.2026'],finance.balance,'1520');
+  const debt = window.AVERA_METRICS.balanceSeries('1520').filter(r=>inRange(r.date)&&Number.isFinite(r.value)).map(r=>[r.date.split('-').reverse().join('.')+(r.date==='2024-12-31'?'²':''),r.value,r.date]);
   const changeLabel = (series, direction, format, unit, context = '') => {
     if (series.length < 2) return '';
     const delta = series.at(-1)[1] - series[0][1];
@@ -128,7 +128,7 @@ window.ownerOverview = function () {
     financeCard('wallet','Выручка',revenue,financialChart('revenue',revenue),1),
     financeCard('trend','Чистая прибыль',profit,financialChart('profit',profit),1,profit.length > 1 && profit[0][1]<0 && profit.at(-1)[1]>0 ? ' · выход в прибыль' : ''),
     card('sales','Средняя маржинальность сделок','НД','Нет подтверждённого среза CRM','sales',missing),
-    financeCard('wallet','Кредиторская задолженность',debt,financialChart('debt',debt),-1),
+    financeCard('wallet','Кредиторская задолженность',debt,financialChart('debt',debt)+(debt.some(r=>r[2]==='2024-12-31')?'<p class="av-muted">² 2024: сравнительная колонка поздней отчётности. Исходная версия отличается; см. «Финансы».</p>':''),-1),
     card('people','Штатные ставки',staffing?staffingNumber(staffing.planned)+' / '+staffingNumber(staffing.occupied):'НД',
       'План / занято'+(staffing?' · вакантно '+staffingNumber(staffing.vacant)+' · '+staffing.date.split('-').reverse().join('.') : ' · нет среза в периоде'),'people',
       overviewChart('staffing',staffingSeries,'Занятые ставки',fmt,Math.max(0,...staffingHistory.map(row=>row.planned))),changeLabel(staffingSeries,0,fmt,'занятых ставок')),

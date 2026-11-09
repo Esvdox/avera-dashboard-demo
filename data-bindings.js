@@ -1,6 +1,11 @@
 'use strict';
 // Derived values only. Source snapshots remain unchanged and retain their totals.
 window.AVERA_METRICS={
+ balanceSeries(code){
+  const dates=['2024-12-31','2025-12-31','2026-09-30'];
+  return dates.map((date,index)=>({date,value:this.value(window.AVERA_ACCOUNTING?.balance,code,index+2),
+   version:index===0?'Сравнительная колонка поздней отчётности':'Отчётный баланс'}));
+ },
  staffing(from='',to='9999-12-31'){
   return (window.AVERA_STAFFING_SOURCE?.snapshots||[])
    .filter(r=>r.date>=from&&r.date<=to)
