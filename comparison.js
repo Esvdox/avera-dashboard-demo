@@ -88,16 +88,43 @@ function periodGraph(metric, index, axis, width) {
   }).join('');
   const ordered = periods.filter(series => !series.point.partial);
   const coordinates = ordered.map(series => [series.x, y(series.point.value)]);
-  const comparisonLine = coordinates.map(pair => pair.join(',')).join(' ');
+  const curve = coordinates.map(([x, py], i) => {
+    if (!i) return 'M' + x + ' ' + py;
+    const [previousX, previousY] = coordinates[i - 1];
+    const third = (x - previousX) / 3;
+    return 'C' + (previousX + third) + ' ' + previousY + ' ' + (x - third) + ' ' + py + ' ' + x + ' ' + py;
+  }).join(' ');
   const first = coordinates[0];
   const last = coordinates.at(-1);
+  const area = first && last ? curve + ' V' + bottom + ' H' + first[0] + ' Z' : '';
+  const arrivalX = dateX(axis.arrival);
+  const crossing = coordinates.findIndex(([x], i) => i > 0 && coordinates[i-1][0] <= arrivalX && x >= arrivalX);
+  let arrivalY = Number.isFinite(metric.startBaseline) ? y(metric.startBaseline) : null;
+  if (crossing > 0) {
+    const [x0,y0] = coordinates[crossing-1];
+    const [x1,y1] = coordinates[crossing];
+    const t = (arrivalX-x0)/(x1-x0);
+    arrivalY = y0+(y1-y0)*t*t*(3-2*t);
+  }
+  const arrivalFillId = 'cmp-arrival-fill-' + index;
+  const arrivalClipId = 'cmp-arrival-clip-' + index;
+  const arrivalFill = '<defs><linearGradient id="' + arrivalFillId + '">' +
+    '<stop stop-color="var(--cmp-arrival-color)" stop-opacity=".38"/><stop offset="1" stop-color="var(--cmp-arrival-color)" stop-opacity=".10"/>' +
+    '</linearGradient><clipPath id="' + arrivalClipId + '"><rect x="' + arrivalX + '" y="20" width="' + (right-arrivalX) + '" height="156"/></clipPath></defs>';
+  const arrivalArea = coordinates.length > 1 && last[0] > arrivalX
+    ? '<path d="' + area + '" fill="url(#' + arrivalFillId + ')" clip-path="url(#' + arrivalClipId + ')"/>'
+    : Number.isFinite(metric.startBaseline)
+      ? '<rect x="' + arrivalX + '" y="' + arrivalY + '" width="' + (right-arrivalX) + '" height="' + (bottom-arrivalY) + '" fill="url(#' + arrivalFillId + ')"/>'
+      : '';
+  const arrivalLine = '<path class="cmp-after-arrival' + (arrivalY === null ? ' cmp-arrival-context' : '') +
+    '" d="M' + arrivalX + ' ' + bottom + 'V' + (arrivalY ?? 20) + '"><title>Приход · 26.10.2026</title></path>';
   const fillId = `cmp-period-fill-${index}`;
   const trace = coordinates.length > 1
     ? `<defs><linearGradient id="${fillId}" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="${Math.min(...coordinates.map(pair => pair[1]))}" y2="${bottom}">
          <stop offset="0" stop-color="var(--accent)" stop-opacity=".34"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/>
        </linearGradient></defs>
-       <polygon class="cmp-period-fill" fill="url(#${fillId})" points="${first[0]},${bottom} ${comparisonLine} ${last[0]},${bottom}"/>
-       <polyline class="cmp-period-trace" points="${comparisonLine}"/>`
+       <path class="cmp-period-fill" fill="url(#${fillId})" d="${area}"/>${arrivalArea}
+       <path class="cmp-period-trace" d="${curve}"/>`
     : '';
   const marks = periods.map((series, i) => {
     const py = y(series.point.value);
@@ -146,8 +173,7 @@ function periodGraph(metric, index, axis, width) {
   return `<svg class="cmp-period-graph" viewBox="0 0 ${width} 202" role="img" aria-label="${safe(metric.name + ', ' + metric.unit + '. ' + (accessible || 'НД в выбранном диапазоне'))}">
       <rect class="cmp-selected-range" x="${rangeX}" y="20" width="${rangeWidth}" height="156"/>
       <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M${left} 20V176H${right}"/>
-      <path class="cmp-after-arrival" d="M${dateX(axis.arrival)} 176H${right}"/>
-      ${baseline}${trace}
+      ${arrivalFill}${baseline}${trace}${coordinates.length < 2 || last[0] <= arrivalX ? arrivalArea : ''}${arrivalLine}
       <path class="cmp-today-line" d="M${dateX(axis.today)} 20V176"/>
       ${contextPoints}${marks}${tickLabels}
       ${periods.length ? '' : `<text class="cmp-axis-date" x="${rangeX + rangeWidth / 2}" y="94" text-anchor="middle">НД в выбранном диапазоне</text>`}
