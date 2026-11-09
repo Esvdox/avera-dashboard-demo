@@ -132,7 +132,7 @@ window.ownerOverview = function () {
       (revenue.length ? financialChart('revenue',revenue) : '') +
       (annualRevenue.length ? '<p class="av-muted">Годовой ОФР · млн ₽</p>' + financialChart('annual-revenue',annualRevenue) : '') +
       (!revenue.length && !annualRevenue.length ? missing : ''),1),
-    financeCard('wallet','Остаток займов по балансу',loans,financialChart('loans',loans),0,'',false),
+    financeCard('wallet','Остаток займов по балансу',loans,financialChart('loans',loans),-1,'',false),
     financeCard('trend','Чистая прибыль',profit.length ? profit : annualProfit,
       (profit.length ? financialChart('profit',profit) : '') +
       (annualProfit.length ? '<p class="av-muted">Годовой ОФР · млн ₽</p>' + financialChart('annual-profit',annualProfit) : '') +

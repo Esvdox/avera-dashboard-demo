@@ -46,7 +46,7 @@ function comparisonData() {
     {name: 'Чистая прибыль за год', unit: 'млн ₽', icon: 'trend', comparable: true, points: profitSeries(window.AVERA_ACCOUNTING.incomeAnnual,2024,'12-31')},
     {name: 'Кредиторская задолженность', unit: 'млн ₽', icon: 'wallet', direction: 'lower', comparableSnapshots: true,
       points: metrics.balanceSeries('1520').map(r=>({...r,value:Number.isFinite(r.value)?r.value/1000:null}))},
-    {name: 'Остаток займов по балансу', unit: 'млн ₽', icon: 'wallet', comparableSnapshots: true, discrete: true, points: loans},
+    {name: 'Остаток займов по балансу', unit: 'млн ₽', icon: 'wallet', direction: 'lower', comparableSnapshots: true, discrete: true, points: loans},
     ...staffingMetrics
   ];
 }
@@ -86,15 +86,18 @@ function periodGraph(metric, index, axis, width) {
   const periods = selected.map((point, i) => ({point, x: dateX(Date.parse(point.date)),
     className: i === 0 && selected.length > 1 ? 'cmp-series-b' : 'cmp-series-a'}));
   const maximum = Math.max(1, metric.startBaseline ?? 0, ...observations.map(point => point.value));
-  const targetStep = maximum * 1.1 / 5;
+  const minimum = Math.min(0, metric.startBaseline ?? 0, ...observations.map(point => point.value));
+  const targetStep = (maximum - minimum) * 1.1 / 5;
   const magnitude = 10 ** Math.floor(Math.log10(targetStep));
   const step = Math.max(['SKU', 'шт.'].includes(metric.unit) ? 1 : 0,
     [1, 2, 2.5, 5, 10].find(value => value * magnitude >= targetStep) * magnitude);
   const topTick = Math.ceil(maximum * 1.1 / step);
   const bottom = 176;
-  const y = value => bottom - (value / (step * topTick)) * 156;
-  const grid = Array.from({length: topTick + 1}, (_, tick) => {
-    const value = tick * step;
+  const lowTick = Math.floor(minimum * 1.1 / step);
+  const y = value => bottom - ((value - lowTick * step) / (step * (topTick - lowTick))) * 156;
+  const zero = y(0);
+  const grid = Array.from({length: topTick - lowTick + 1}, (_, tick) => {
+    const value = (tick + lowTick) * step;
     return `<path d="M${left} ${y(value)}H${right}"/><text x="${left - 14}" y="${y(value) + 3}" text-anchor="end">${fmt(value)}${metric.unit === '%' ? '%' : ''}</text>`;
   }).join('');
   const ordered = periods.filter(series => !series.point.partial);
@@ -107,7 +110,7 @@ function periodGraph(metric, index, axis, width) {
   }).join(' ');
   const first = coordinates[0];
   const last = coordinates.at(-1);
-  const area = first && last ? curve + ' V' + bottom + ' H' + first[0] + ' Z' : '';
+  const area = first && last ? curve + ' V' + zero + ' H' + first[0] + ' Z' : '';
   const arrivalX = dateX(axis.arrival);
   const crossing = coordinates.findIndex(([x], i) => i > 0 && coordinates[i-1][0] <= arrivalX && x >= arrivalX);
   let arrivalY = Number.isFinite(metric.startBaseline) ? y(metric.startBaseline) : null;
@@ -128,15 +131,13 @@ function periodGraph(metric, index, axis, width) {
       ? '<rect x="' + arrivalX + '" y="' + arrivalY + '" width="' + (right-arrivalX) + '" height="' + (bottom-arrivalY) + '" fill="url(#' + arrivalFillId + ')"/>'
       : '';
   const arrivalLine = '<path class="cmp-after-arrival' + (arrivalY === null ? ' cmp-arrival-context' : '') +
-    '" d="M' + arrivalX + ' ' + bottom + 'V' + (arrivalY ?? 20) + '"><title>Приход · 26.10.2026</title></path>';
+    '" d="M' + arrivalX + ' ' + (arrivalY === null ? bottom : zero) + 'V' + (arrivalY ?? 20) + '"><title>Приход · 26.10.2026</title></path>';
   const fillId = `cmp-period-fill-${index}`;
-  const trace = coordinates.length > 1
-    ? `<defs><linearGradient id="${fillId}" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="${Math.min(...coordinates.map(pair => pair[1]))}" y2="${bottom}">
-         <stop offset="0" stop-color="var(--accent)" stop-opacity=".34"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/>
-       </linearGradient></defs>
-       <path class="cmp-period-fill" fill="url(#${fillId})" d="${area}"/>${arrivalArea}
-       <path class="cmp-period-trace" d="${curve}"/>`
-    : '';
+  const trace = coordinates.length > 1 ? ['positive','negative'].map((side,i)=>{
+    const key = fillId + '-' + side;
+    const color = i ? 'var(--cmp-loss)' : 'var(--accent)';
+    return `<defs><clipPath id="${key}-clip"><rect x="${left}" y="${i ? zero : 20}" width="${right-left}" height="${i ? bottom-zero : zero-20}"/></clipPath><linearGradient id="${key}" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="${i ? bottom : 20}" y2="${zero}"><stop stop-color="${color}" stop-opacity=".34"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><g clip-path="url(#${key}-clip)"><path fill="url(#${key})" d="${area}"/><path class="cmp-period-trace" style="stroke:${color}" vector-effect="non-scaling-stroke" d="${curve}"/></g>`;
+  }).join('') + arrivalArea : '';
   const marks = periods.map((series, i) => {
     const py = y(series.point.value);
     const x = series.x;
@@ -147,7 +148,7 @@ function periodGraph(metric, index, axis, width) {
     const labelY = close && i % 2
       ? (py < y(previous.point.value) ? Math.max(12, py - 32) : Math.min(175, py + 15))
       : py - 18;
-    return `<g class="${series.className}"><circle cx="${x}" cy="${py}" r="3"/><text class="cmp-point-label ${series.point.value < 0 ? 'cmp-point-negative' : ''}" x="${labelX}" y="${labelY}" text-anchor="${alignLeft ? 'start' : 'end'}">${fmt(series.point.value)}${metric.unit === '%' ? '%' : ''}</text></g>`;
+    return `<g class="${series.className}" style="color:${series.point.value < 0 ? 'var(--cmp-loss)' : 'var(--accent)'}"><circle cx="${x}" cy="${py}" r="3"/><text class="cmp-point-label ${series.point.value < 0 ? 'cmp-point-negative' : ''}" x="${labelX}" y="${labelY}" text-anchor="${alignLeft ? 'start' : 'end'}">${fmt(series.point.value)}${metric.unit === '%' ? '%' : ''}</text></g>`;
   }).join('');
   const label = date => {
     const year = date.slice(0, 4);
@@ -183,7 +184,7 @@ function periodGraph(metric, index, axis, width) {
   const rangeWidth = dateX(selectedEnd + halfDay) - rangeX;
   return `<svg class="cmp-period-graph" viewBox="0 0 ${width} 202" role="img" aria-label="${safe(metric.name + ', ' + metric.unit + '. ' + (accessible || 'НД в выбранном диапазоне'))}">
       <rect class="cmp-selected-range" x="${rangeX}" y="20" width="${rangeWidth}" height="156"/>
-      <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M${left} 20V176H${right}"/>
+      <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M${left} 20V176 M${left} ${zero}H${right}"/>
       ${arrivalFill}${baseline}${trace}${coordinates.length < 2 || last[0] <= arrivalX ? arrivalArea : ''}${arrivalLine}
       <path class="cmp-today-line" d="M${dateX(axis.today)} 20V176"/>
       ${contextPoints}${marks}${tickLabels}
