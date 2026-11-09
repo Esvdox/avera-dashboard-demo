@@ -63,22 +63,7 @@ function comparisonAxis(width, from, to) {
   const right = width - 26;
   const x = date => left + (date - start) / (end - start) * (right - left);
   const maxTicks = Math.max(3, Math.floor((right - left) / 72));
-  const days = (end - start) / comparisonDay;
-  const unit = days <= 45 ? 'day' : days <= 730 ? 'month' : 'year';
-  const step = Math.max(1, Math.ceil(days / (maxTicks * {day: 1, month: 30, year: 365}[unit])));
-  const cursor = new Date(start);
-  if (unit !== 'day') cursor.setUTCDate(1);
-  if (unit === 'year') cursor.setUTCMonth(0);
-  const formatter = new Intl.DateTimeFormat('ru-RU', {
-    timeZone: 'UTC', ...(unit === 'day' ? {day: '2-digit', month: '2-digit'} : unit === 'month' ? {month: 'short', year: '2-digit'} : {year: 'numeric'})
-  });
-  const ticks = [];
-  while (+cursor <= end) {
-    if (+cursor >= start) ticks.push({x: x(+cursor), label: formatter.format(cursor)});
-    if (unit === 'day') cursor.setUTCDate(cursor.getUTCDate() + step);
-    else if (unit === 'month') cursor.setUTCMonth(cursor.getUTCMonth() + step);
-    else cursor.setUTCFullYear(cursor.getUTCFullYear() + step);
-  }
+  const ticks = window.avTimeTicks(start,end,maxTicks).map(tick=>({x:x(tick.date),label:tick.label}));
   return {left, right, x, start, end, selectedStart, selectedEnd, ticks, arrival, today};
 }
 
@@ -281,6 +266,6 @@ new ResizeObserver(() => {
   const width = $('#content').clientWidth;
   if (width === comparisonContentWidth) return;
   comparisonContentWidth = width;
-  if (current === 'comparison' && comparisonView === 'chart') render();
+  if (current === 'overview' || (current === 'comparison' && comparisonView === 'chart')) render();
 }).observe($('#content'));
 render();

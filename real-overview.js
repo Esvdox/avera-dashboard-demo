@@ -13,8 +13,33 @@ function card(icon, label, value, note, route, chart, change = '') {
 const overviewRange = {from: '2025-09-30', to: new Intl.DateTimeFormat('sv-SE', {timeZone:'Europe/Moscow'}).format(new Date())};
 const missing = '<p class="av-muted">Нет данных за выбранный период</p>';
 
+window.avTimeTicks = function (start, end, count) {
+  const day = 86400000;
+  const days = (end - start) / day;
+  const unit = days <= 21 ? 'day' : days <= 140 ? 'week' : days <= 730 ? 'month' : 'year';
+  const step = Math.max(1, Math.ceil(days / (count * {day:1, week:7, month:31, year:366}[unit])));
+  const cursor = new Date(start);
+  if (unit === 'week') cursor.setUTCDate(cursor.getUTCDate() - (cursor.getUTCDay() + 6) % 7);
+  if (unit === 'month' || unit === 'year') cursor.setUTCDate(1);
+  if (unit === 'year') cursor.setUTCMonth(0);
+  const format = new Intl.DateTimeFormat('ru-RU', {timeZone:'UTC',
+    ...(unit === 'year' ? {year:'numeric'} : unit === 'month' ? {month:'short',year:'2-digit'} : {day:'2-digit',month:unit==='week'?'short':'2-digit'})
+  });
+  const ticks = [];
+  while (+cursor <= end) {
+    if (+cursor >= start) ticks.push({date:+cursor,label:format.format(cursor)});
+    if (unit === 'month') cursor.setUTCMonth(cursor.getUTCMonth()+step);
+    else if (unit === 'year') cursor.setUTCFullYear(cursor.getUTCFullYear()+step);
+    else cursor.setUTCDate(cursor.getUTCDate()+step*(unit==='week'?7:1));
+  }
+  return ticks;
+};
+
 function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
   if (!points.length) return missing;
+  const start = Date.parse(overviewRange.from), end = Date.parse(overviewRange.to);
+  const x = day => end === start ? 224 : 88 + 268 * (day - start) / (end - start);
+  const ticksX = window.avTimeTicks(start,end,Math.max(2,Math.floor(Math.min(740,$('#content').clientWidth-32)/85)));
   const values = points.map(([, value]) => value);
   const minimum = Math.min(0, ...values);
   const maximum = Math.max(ceiling, 0, ...values);
@@ -26,8 +51,8 @@ function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
   const y = value => 36 + (high - value) / (high - low) * 118;
   const zero = y(0);
   const color = value => value < 0 ? 'var(--av-profit-loss)' : 'var(--accent)';
-  const marks = points.map(([label, value], i) => ({
-    label, value, x: points.length === 1 ? 224 : 111 + i * 235 / (points.length - 1), y: y(value)
+  const marks = points.map(([label, value, day]) => ({
+    label, value, x: x(Date.parse(day)), y: y(value)
   }));
   const first = marks[0];
   const last = marks.at(-1);
@@ -50,9 +75,10 @@ function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
     ticks.map(value => '<path d="M65 ' + y(value) + 'H392" class="av-kpi-gridline"/><text class="' + (Math.abs(Math.round(value/tickStep))%2 ? 'av-kpi-minor-tick' : '') + '" x="53" y="' +
       (y(value) + 4) + '" text-anchor="end">' + safe(fmt(value)) + '</text>').join('') + traces +
     '<path d="M65 36V154 M65 ' + zero + 'H392" class="av-profit-axis"/>' +
-    marks.map(mark => '<circle cx="' + mark.x + '" cy="' + mark.y + '" r="3.5" fill="' + color(mark.value) +
-      '"/><text x="' + mark.x + '" y="' + (mark.y - 16) + '" fill="' + color(mark.value) + '" text-anchor="middle">' +
-      safe(format(mark.value)) + '</text><text x="' + mark.x + '" y="184" text-anchor="middle">' + safe(mark.label) + '</text>').join('') +
+    marks.map((mark, i) => '<circle cx="' + mark.x + '" cy="' + mark.y + '" r="3.5" fill="' + color(mark.value) +
+      '"/><text x="' + mark.x + '" y="' + (i % 2 && mark.x - marks[i-1].x < 90 ? mark.y + 22 : mark.y - 16) + '" fill="' + color(mark.value) + '" text-anchor="middle">' +
+      safe(format(mark.value)) + '</text>').join('') +
+    ticksX.map(tick=>'<text x="'+x(tick.date)+'" y="184" text-anchor="middle">'+safe(tick.label)+'</text>').join('') +
     '</svg>';
 }
 
@@ -67,7 +93,7 @@ window.ownerOverview = function () {
   const read = window.AVERA_METRICS.value;
   const points = (dates, labels, rows, code) => dates.flatMap((day,i)=>{
     const value = read(rows,code,i+2);
-    return inRange(day) && Number.isFinite(value) ? [[labels[i],value]] : [];
+    return inRange(day) && Number.isFinite(value) ? [[labels[i],value,day]] : [];
   });
   const nineMonths = code => points(['2025-09-30','2026-09-30'],['9 мес. 2025','9 мес. 2026'],finance.incomeNine,code);
   const revenue = nineMonths('2110');
@@ -83,8 +109,8 @@ window.ownerOverview = function () {
   const financeCard = (icon,label,series,chart,direction,context) => card(icon,label,series.length ? money(series.at(-1)[1])+' млн ₽':'НД',
     series.length ? series.map(([period])=>period).join(' → ')+' · млн ₽' : 'Нет среза в выбранном периоде','finance',chart,
     changeLabel(series,direction,money,'млн ₽',context));
-  const staffingSeries = staffingHistory.map(row=>[row.date.split('-').reverse().join('.'),row.planned-row.vacant]);
-  const financialChart = (id, series) => overviewChart(id, series.map(([label, value]) => [label, value / 1000]), 'млн ₽', value => money(value * 1000));
+  const staffingSeries = staffingHistory.map(row=>[row.date.split('-').reverse().join('.'),row.planned-row.vacant,row.date]);
+  const financialChart = (id, series) => overviewChart(id, series.map(([label, value, day]) => [label, value / 1000, day]), 'млн ₽', value => money(value * 1000));
   const controls = '<div class="panel cmp-controls" aria-label="Единый период обзора"><div class="cmp-dates">' +
     [['from','От'],['to','До']].map(([key,label])=>'<div class="cmp-date-field"><label for="av-overview-'+key+'">'+label+
       '</label><input type="date" id="av-overview-'+key+'" data-overview-date="'+key+'" value="'+safe(overviewRange[key])+'"></div>').join('') +
@@ -99,7 +125,7 @@ window.ownerOverview = function () {
       overviewChart('staffing',staffingSeries,'Занятые ставки',fmt,Math.max(0,...staffingHistory.map(row=>row.planned))),changeLabel(staffingSeries,0,fmt,'занятых ставок')),
     card('products','Готовность КД',products?products.complete+' из '+products.count+' SKU':'НД',
       products?'КД на 100% · '+kdDate:'Нет среза в выбранном периоде','products',
-      products && products.count ? overviewChart('kd',[[kdDate,products.complete/products.count*100]],'Доля SKU с КД на 100%', value => fmt(value)+'%',100) : missing)
+      products && products.count ? overviewChart('kd',[[kdDate,products.complete/products.count*100,date(kdDate)]],'Доля SKU с КД на 100%', value => fmt(value)+'%',100) : missing)
   ].join('') + '</section>';
 };
 $('#content').addEventListener('change', event=>{
