@@ -2,20 +2,56 @@
 // Фактические данные. Публикация разрешена Сергеем 02.11.2026.
 (()=>{
 const money=v=>window.AVERA_METRICS.million(v);
-function card(icon,label,value,note,route){return `<a class="av-metric" href="#${route}"><div class="av-label">${window.avIcon(icon)}${safe(label)}</div><div class="av-number">${safe(value)}</div><div class="av-muted">${safe(note)}</div></a>`;}
+function card(icon, label, value, note, route, chart) {
+  return `<a class="av-metric" href="#${route}">
+    <div class="av-label">${window.avIcon(icon)}${safe(label)}</div>
+    <div class="av-number">${safe(value)}</div><div class="av-muted">${safe(note)}</div>
+    <div class="av-kpi-chart">${chart}</div>
+  </a>`;
+}
+
+function reportBars(points) {
+  const values = points.filter(([, value]) => Number.isFinite(value));
+  if (!values.length) return '<p class="av-muted">Нет отчётных значений</p>';
+  const min = Math.min(0, ...values.map(([, value]) => value));
+  const max = Math.max(0, ...values.map(([, value]) => value));
+  const scale = max - min || 1;
+  const zero = -min / scale * 100;
+  return `<ul class="av-kpi-bars">${values.map(([label, value]) => {
+    const left = (Math.min(0, value) - min) / scale * 100;
+    return `<li><span>${safe(label)}</span><div class="av-kpi-track" aria-hidden="true">
+      <i class="${value < 0 ? 'av-kpi-negative' : ''}" style="left:${left}%;width:${Math.abs(value) / scale * 100}%"></i>
+      ${min < 0 && max > 0 ? `<b style="left:${zero}%"></b>` : ''}
+      </div><strong>${safe(money(value))}</strong></li>`;
+  }).join('')}</ul>`;
+}
+
+function shareBar(value, total, label) {
+  if (!total) return '<p class="av-muted">Нет данных для расчёта доли</p>';
+  return `<progress class="av-kpi-progress" value="${value}" max="${total}" aria-label="${safe(label)}"></progress>
+    <p class="av-muted">${safe(label)} · ${fmt(value / total * 100)}%</p>`;
+}
 function result(code){return window.AVERA_METRICS.value(window.AVERA_ACCOUNTING.incomeNine,code,3);}
 function balance(code){return window.AVERA_METRICS.value(window.AVERA_ACCOUNTING.balance,code,4);}
 window.ownerOverview = function () {
   const staffing = window.AVERA_STAFFING;
   const products = window.AVERA_METRICS.products();
+  const finance = window.AVERA_ACCOUNTING;
+  const read = window.AVERA_METRICS.value;
+  const nineMonths = code => reportBars([['9 мес. 2025', read(finance.incomeNine, code, 2)], ['9 мес. 2026', result(code)]]);
   return '<section class="av-grid av-owner-kpis" aria-label="Показатели компании">' + [
-    card('wallet', 'Выручка', money(result('2110')) + ' млн ₽', '9 месяцев 2026', 'finance'),
-    card('trend', 'Чистая прибыль', money(result('2400')) + ' млн ₽', '9 месяцев 2026', 'finance'),
-    card('sales', 'Средняя маржинальность сделок', 'НД', 'Нет подтверждённого среза CRM', 'sales'),
-    card('wallet', 'Кредиторская задолженность', money(balance('1520')) + ' млн ₽', 'На 30.09.2026', 'finance'),
+    card('wallet', 'Выручка', money(result('2110')) + ' млн ₽', '9 месяцев 2026', 'finance', nineMonths('2110')),
+    card('trend', 'Чистая прибыль', money(result('2400')) + ' млн ₽', '9 месяцев 2026', 'finance', nineMonths('2400')),
+    card('sales', 'Средняя маржинальность сделок', 'НД', 'Нет подтверждённого среза CRM', 'sales',
+      '<p class="av-muted">Для графика нужны данные о выручке и марже по сделкам.</p>'),
+    card('wallet', 'Кредиторская задолженность', money(balance('1520')) + ' млн ₽', 'На 30.09.2026', 'finance',
+      reportBars(['31.12.2024', '31.12.2025', '30.09.2026'].map((label, i) => [label, read(finance.balance, '1520', i + 2)]))),
     card('people', 'Численность сотрудников', staffing ? fmt(staffing.planned) + ' / ' + fmt(staffing.planned - staffing.vacant) : 'НД',
-      'Ставок всего / занято' + (staffing ? ' · ' + staffing.asOf : ''), 'people'),
-    card('products', 'Готовность КД', products.complete + ' из ' + products.count + ' SKU', 'КД на 100% · ' + window.AVERA_KD.asOf, 'products')
+      'Ставок всего / занято' + (staffing ? ' · ' + staffing.asOf : ''), 'people',
+      staffing ? shareBar(staffing.planned - staffing.vacant, staffing.planned, 'Доля занятых ставок') :
+        '<p class="av-muted">Данные ШР доступны во внутренней версии.</p>'),
+    card('products', 'Готовность КД', products.complete + ' из ' + products.count + ' SKU', 'КД на 100% · ' + window.AVERA_KD.asOf, 'products',
+      shareBar(products.complete, products.count, 'Доля SKU с КД на 100%'))
   ].join('') + '</section>';
 };
 function date(v){const m=String(v||'').match(/^(\d{2})\.(\d{2})\.(\d{4})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:null;}
