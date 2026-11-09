@@ -2,10 +2,10 @@
 // Фактические данные. Публикация разрешена Сергеем 02.11.2026.
 (()=>{
 const money=v=>window.AVERA_METRICS.million(v);
-function card(icon, label, value, note, route, chart) {
+function card(icon, label, value, note, route, chart, change = '') {
   return `<a class="av-metric" href="#${route}">
     <div class="av-label">${window.avIcon(icon)}${safe(label)}</div>
-    <div class="av-number">${safe(value)}</div><div class="av-muted">${safe(note)}</div>
+    <div class="av-number av-kpi-values"><span>${safe(value)}</span>${change}</div><div class="av-muted">${safe(note)}</div>
     <div class="av-kpi-chart">${chart}</div>
   </a>`;
 }
@@ -73,23 +73,30 @@ window.ownerOverview = function () {
   const revenue = nineMonths('2110');
   const profit = nineMonths('2400');
   const debt = points(['2024-12-31','2025-12-31','2026-09-30'],['31.12.2024','31.12.2025','30.09.2026'],finance.balance,'1520');
-  const delta = profit.length === 2 ? profit[1][1] - profit[0][1] : null;
-  const deltaNote = delta === null ? '' : '<p class="av-profit-delta'+(delta<0?' av-profit-decline':'')+'"><b>'+(delta>0?'+':'')+money(delta)+' млн ₽</b>'+(profit[0][1]<0&&profit[1][1]>0?' · выход в прибыль':'')+'</p>';
-  const financeCard = (icon,label,series,chart) => card(icon,label,series.length ? money(series.at(-1)[1])+' млн ₽':'НД',
-    series.length ? series.map(([period])=>period).join(' → ')+' · млн ₽' : 'Нет среза в выбранном периоде','finance',chart);
+  const changeLabel = (series, direction, format, unit, context = '') => {
+    if (series.length < 2) return '';
+    const delta = series.at(-1)[1] - series[0][1];
+    const tone = delta === 0 || direction === 0 ? 'neutral' : delta * direction > 0 ? 'good' : 'bad';
+    return '<span class="av-kpi-delta av-kpi-delta-' + tone + '" title="Изменение за выбранный период">' +
+      safe((delta > 0 ? '+' : '') + format(delta) + ' ' + unit + context) + '</span>';
+  };
+  const financeCard = (icon,label,series,chart,direction,context) => card(icon,label,series.length ? money(series.at(-1)[1])+' млн ₽':'НД',
+    series.length ? series.map(([period])=>period).join(' → ')+' · млн ₽' : 'Нет среза в выбранном периоде','finance',chart,
+    changeLabel(series,direction,money,'млн ₽',context));
+  const staffingSeries = staffingHistory.map(row=>[row.date.split('-').reverse().join('.'),row.planned-row.vacant]);
   const financialChart = (id, series) => overviewChart(id, series.map(([label, value]) => [label, value / 1000]), 'млн ₽', value => money(value * 1000));
   const controls = '<div class="panel cmp-controls" aria-label="Единый период обзора"><div class="cmp-dates">' +
     [['from','От'],['to','До']].map(([key,label])=>'<div class="cmp-date-field"><label for="av-overview-'+key+'">'+label+
       '</label><input type="date" id="av-overview-'+key+'" data-overview-date="'+key+'" value="'+safe(overviewRange[key])+'"></div>').join('') +
     '</div>' + (from && to && from<=to ? '' : '<p class="av-muted">Укажите корректный диапазон дат.</p>') + '</div>';
   return controls + '<section class="av-grid av-owner-kpis" aria-label="Показатели компании">' + [
-    financeCard('wallet','Выручка',revenue,financialChart('revenue',revenue)),
-    financeCard('trend','Чистая прибыль',profit,financialChart('profit',profit)+deltaNote),
+    financeCard('wallet','Выручка',revenue,financialChart('revenue',revenue),1),
+    financeCard('trend','Чистая прибыль',profit,financialChart('profit',profit),1,profit.length > 1 && profit[0][1]<0 && profit.at(-1)[1]>0 ? ' · выход в прибыль' : ''),
     card('sales','Средняя маржинальность сделок','НД','Нет подтверждённого среза CRM','sales',missing),
-    financeCard('wallet','Кредиторская задолженность',debt,financialChart('debt',debt)),
+    financeCard('wallet','Кредиторская задолженность',debt,financialChart('debt',debt),-1),
     card('people','Численность сотрудников',staffing?fmt(staffing.planned)+' / '+fmt(staffing.planned-staffing.vacant):'НД',
       'Ставок всего / занято'+(staffing?' · '+staffing.date.split('-').reverse().join('.') : ''),'people',
-      overviewChart('staffing',staffingHistory.map(row=>[row.date.split('-').reverse().join('.'),row.planned-row.vacant]),'Занятые ставки',fmt,Math.max(0,...staffingHistory.map(row=>row.planned)))),
+      overviewChart('staffing',staffingSeries,'Занятые ставки',fmt,Math.max(0,...staffingHistory.map(row=>row.planned))),changeLabel(staffingSeries,0,fmt,'занятых ставок')),
     card('products','Готовность КД',products?products.complete+' из '+products.count+' SKU':'НД',
       products?'КД на 100% · '+kdDate:'Нет среза в выбранном периоде','products',
       products && products.count ? overviewChart('kd',[[kdDate,products.complete/products.count*100]],'Доля SKU с КД на 100%', value => fmt(value)+'%',100) : missing)
