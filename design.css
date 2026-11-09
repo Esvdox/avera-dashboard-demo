@@ -152,3 +152,5 @@ body#avera-owner{margin:0;font:var(--text-base)/1.45 var(--font-ui);background:v
 #avera-owner main.av-overview-type :is(p,span,strong,small,label,input,text,.notice,.av-label,.av-muted,footer){font-family:inherit;font-size:12px}
 #avera-owner main.av-overview-type h1{font-family:inherit;font-size:24px}
 #avera-owner main.av-overview-type .av-number{font-family:inherit;font-size:18px}
+
+#avera-owner main.av-overview-type :is(#subtitle,.notice){display:none}
