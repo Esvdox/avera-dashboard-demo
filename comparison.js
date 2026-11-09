@@ -130,8 +130,15 @@ function periodGraph(metric, index, axis, width) {
   const startLegend = Number.isFinite(metric.startBaseline)
     ? `<li class="cmp-series-b"><i aria-hidden="true"></i>Старт · ${fmt(metric.startBaseline)} SKU</li>`
     : '';
+  const baselineY = y(metric.startBaseline);
+  const baselineFillId = `cmp-baseline-fill-${index}`;
   const baseline = startLegend
-    ? `<path class="cmp-start-baseline" d="M${left} ${y(metric.startBaseline)}H${right}"/>`
+    ? `<defs><linearGradient id="${baselineFillId}" x2="0" y2="100%">
+        <stop stop-color="var(--accent)" stop-opacity=".40"/>
+        <stop offset="1" stop-color="var(--accent)" stop-opacity="0"/>
+      </linearGradient></defs>
+      <rect x="${left}" y="${baselineY}" width="${right - left}" height="${bottom - baselineY}" fill="url(#${baselineFillId})"/>
+      <path class="cmp-start-baseline" d="M${left} ${baselineY}H${right}"/>`
     : '';
   const seriesLabel = series => series.point.label || 'Срез';
   const legend = startLegend + (ordered.length > 1
