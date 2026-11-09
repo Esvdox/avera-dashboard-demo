@@ -5,7 +5,7 @@ const money=v=>window.AVERA_METRICS.million(v);
 function card(icon, label, value, note, route, chart, change = '') {
   return `<a class="av-metric" href="#${route}">
     <div class="av-label">${window.avIcon(icon)}${safe(label)}</div>
-    <div class="av-number av-kpi-values"><span>${safe(value)}</span>${change}</div><div class="av-muted">${safe(note)}</div>
+    <div class="av-number av-kpi-values"><span>${safe(value)}</span>${change}</div>${note ? `<div class="av-muted">${safe(note)}</div>` : ''}
     <div class="av-kpi-chart">${chart}</div>
   </a>`;
 }
@@ -115,8 +115,8 @@ window.ownerOverview = function () {
     return '<span class="av-kpi-delta av-kpi-delta-' + tone + '" title="Изменение за выбранный период">' +
       safe((delta > 0 ? '+' : '') + format(delta) + ' ' + unit + context) + '</span>';
   };
-  const financeCard = (icon,label,series,chart,direction,context) => card(icon,label,series.length ? money(series.at(-1)[1])+' млн ₽':'НД',
-    series.length ? series.map(([period])=>period).join(' → ')+' · млн ₽' : 'Нет среза в выбранном периоде','finance',chart,
+  const financeCard = (icon,label,series,chart,direction,context,showPeriods = true) => card(icon,label,series.length ? money(series.at(-1)[1])+' млн ₽':'НД',
+    series.length ? (showPeriods ? series.map(([period])=>period).join(' → ')+' · млн ₽' : '') : 'Нет среза в выбранном периоде','finance',chart,
     changeLabel(series,direction,money,'млн ₽',context));
   const staffingSeries = staffingHistory.filter(row=>Number.isFinite(row.occupied)).map(row=>[row.date.split('-').reverse().join('.'),row.occupied,row.date]);
   const financialChart = (id, series) => overviewChart(id, series.map(([label, value, day]) => [label, value / 1000, day]), 'млн ₽', value => money(value * 1000));
@@ -128,7 +128,7 @@ window.ownerOverview = function () {
     financeCard('wallet','Выручка',revenue,financialChart('revenue',revenue),1),
     financeCard('trend','Чистая прибыль',profit,financialChart('profit',profit),1,profit.length > 1 && profit[0][1]<0 && profit.at(-1)[1]>0 ? ' · выход в прибыль' : ''),
     card('sales','Средняя маржинальность сделок','НД','Нет подтверждённого среза CRM','sales',missing),
-    financeCard('wallet','Кредиторская задолженность',debt,financialChart('debt',debt)+(debt.some(r=>r[2]==='2024-12-31')?'<p class="av-muted">² 2024: сравнительная колонка поздней отчётности. Исходная версия отличается; см. «Финансы».</p>':''),-1),
+    financeCard('wallet','Кредиторская задолженность',debt,financialChart('debt',debt),-1,'',false),
     card('people','Штатные ставки',staffing?staffingNumber(staffing.planned)+' / '+staffingNumber(staffing.occupied):'НД',
       'План / занято'+(staffing?' · вакантно '+staffingNumber(staffing.vacant)+' · '+staffing.date.split('-').reverse().join('.') : ' · нет среза в периоде'),'people',
       overviewChart('staffing',staffingSeries,'Занятые ставки',fmt,Math.max(0,...staffingHistory.map(row=>row.planned))),changeLabel(staffingSeries,0,fmt,'занятых ставок')),
