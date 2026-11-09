@@ -136,7 +136,7 @@ function periodGraph(metric, index, axis, width) {
     const labelY = close && i % 2
       ? (py < y(previous.point.value) ? Math.max(12, py - 32) : Math.min(175, py + 15))
       : py - 18;
-    return `<g class="${series.className}"><circle cx="${x}" cy="${py}" r="3"/><text class="cmp-point-label" x="${labelX}" y="${labelY}" text-anchor="${alignLeft ? 'start' : 'end'}">${fmt(series.point.value)}${metric.unit === '%' ? '%' : ''}</text></g>`;
+    return `<g class="${series.className}"><circle cx="${x}" cy="${py}" r="3"/><text class="cmp-point-label ${series.point.value < 0 ? 'cmp-point-negative' : ''}" x="${labelX}" y="${labelY}" text-anchor="${alignLeft ? 'start' : 'end'}">${fmt(series.point.value)}${metric.unit === '%' ? '%' : ''}</text></g>`;
   }).join('');
   const label = date => {
     const year = date.slice(0, 4);

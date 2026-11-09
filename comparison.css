@@ -69,3 +69,7 @@
     display:grid;grid-row:span 3;grid-template-rows:subgrid;row-gap:4px;align-items:start;
   }
 }
+
+#avera-owner .cmp-period-graph .cmp-point-label{fill:var(--accent)}
+#avera-owner .cmp-period-graph .cmp-point-negative{fill:#bd3d56}
+#avera-owner.dark .cmp-period-graph .cmp-point-negative{fill:#ff98aa}
