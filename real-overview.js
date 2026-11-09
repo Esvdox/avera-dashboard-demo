@@ -36,14 +36,14 @@ function overviewTimeTicks(start, end, count) {
   return ticks;
 }
 
-function overviewChart(id, points, unit, format = fmt, secondary = []) {
-  if (!points.length) return missing;
+function overviewChart(id, points, unit, format = fmt, secondary = [], options = {}) {
+  if (!points.length && !secondary.length && !options.contractDates?.length) return missing;
   const start = Date.parse(overviewRange.from), end = Date.parse(overviewRange.to);
   const width = $('#content').clientWidth - 34;
-  const left = 56, right = width - 26;
+  const left = 56, right = width - (options.rightAxis ? 52 : 26);
   const x = day => end === start ? (left + right) / 2 : left + 28 + (right - left - 56) * (day - start) / (end - start);
   const ticksX = overviewTimeTicks(start,end,Math.max(2,Math.floor((right-left)/85)));
-  const values = [...points, ...secondary].map(([, value]) => value);
+  const values = (options.rightAxis ? points : [...points, ...secondary]).map(([, value]) => value);
   const minimum = Math.min(0, ...values);
   const maximum = Math.max(0, ...values);
   const span = maximum - minimum || 1;
@@ -66,12 +66,7 @@ function overviewChart(id, points, unit, format = fmt, secondary = []) {
       ? Math.min(175, mark.y + 22) : above;
   });
   const last = curveMarks.at(-1);
-  let curve = first ? 'M' + first.x + ' ' + first.y : '';
-  curveMarks.slice(1).forEach((mark, i) => {
-    const previous = curveMarks[i];
-    const third = (mark.x - previous.x) / 3;
-    curve += ` C${previous.x + third} ${previous.y} ${mark.x - third} ${mark.y} ${mark.x} ${mark.y}`;
-  });
+  const curve = smoothCurve(curveMarks);
   const area = first ? curve + ' V' + zero + ' H' + first.x + ' Z' : '';
   const ticks = Array.from({length: Math.round((high - low) / tickStep) + 1}, (_, i) => (low + i * tickStep));
   const clip = side => 'av-kpi-' + id + '-' + side;
@@ -107,108 +102,189 @@ function overviewChart(id, points, unit, format = fmt, secondary = []) {
     const dash = arrivalY === undefined ? ' stroke-dasharray="3 4"' : '';
     management += `<path class="av-management-marker" d="${marker}" fill="none" stroke="var(--av-management)" stroke-width="1.5" vector-effect="non-scaling-stroke"${dash}><title>${arrivalLabel}</title></path>`;
   }
-  const staffLine = secondary.length ? '<polyline fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4" vector-effect="non-scaling-stroke" points="' +
-    secondary.map(([, value, day]) => x(Date.parse(day)) + ',' + y(value)).join(' ') + '"/>' +
-    secondary.map(([label, value, day]) => '<circle r="3" fill="var(--muted)" cx="' + x(Date.parse(day)) + '" cy="' + y(value) + '"><title>' + safe(label + ': ' + format(value)) + '</title></circle>').join('') : '';
+  const secondaryValues = secondary.map(([, value]) => value);
+  const rateLow = Math.min(0, Math.floor(Math.min(...secondaryValues) / 4) * 4);
+  const rateHigh = Math.max(4, Math.ceil(Math.max(...secondaryValues) / 4) * 4);
+  const secondaryY = options.rightAxis ? value => 28 + (rateHigh - value) / (rateHigh - rateLow) * 148 : y;
+  const secondMarks = secondary.map(([label, value, day]) => ({label, value, x:x(Date.parse(day)), y:secondaryY(value)}));
+  const secondaryColor = options.rightAxis ? 'var(--av-management)' : 'var(--muted)';
+  const rightTicks = options.rightAxis && secondMarks.length ? Array.from({length:5}, (_, i) => rateLow + (rateHigh-rateLow)*i/4)
+    .map(value => `<text x="${right + 5}" y="${secondaryY(value) + 4}" fill="${secondaryColor}">${safe(fmt(value))}%</text>`).join('') : '';
+  const branch = options.branch && secondMarks.length ? marks.find(mark => mark.x === secondMarks[0].x) : null;
+  const secondPath = smoothCurve(branch ? [branch, ...secondMarks] : secondMarks);
+  const secondaryLine = secondMarks.length ? `<path class="av-secondary-line" d="${secondPath}" fill="none" stroke="${secondaryColor}" stroke-width="1.5" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>` +
+    secondMarks.map((mark,i) => `<circle class="av-secondary-point" r="3" fill="${secondaryColor}" cx="${mark.x}" cy="${mark.y}"><title>${safe(mark.label + ': ' + fmt(mark.value) + (options.rightAxis ? '%' : ''))}</title></circle>` +
+      (options.rightAxis && width < 600 ? '' : `<text class="av-kpi-point-label" x="${mark.x + (i % 2 ? 7 : -7)}" y="${Math.min(175, mark.y + 17)}" text-anchor="${i % 2 ? 'start' : 'end'}" fill="${secondaryColor}">${safe(fmt(mark.value))}${options.rightAxis ? '%' : ''}</text>`)).join('') : '';
+  const coverage = (options.contractDates || []).map(([label,count,day]) => `<path class="contract-coverage-tick" d="M${x(Date.parse(day))} 177v6" stroke="var(--muted)" stroke-width="1.5"><title>${safe(label + ' · договоров: ' + count)}</title></path>`).join('');
   return '<svg class="av-profit-chart" viewBox="0 0 ' + width + ' 202" role="img" aria-label="' +
     safe(unit + '. ' + marks.map(mark => mark.label + ': ' + format(mark.value)).join('. ') + (showArrival ? '. ' + arrivalLabel : '')) + '">' +
     ticks.map(value => '<path d="M' + left + ' ' + y(value) + 'H' + right + '" class="av-kpi-gridline"/><text class="' + (Math.abs(Math.round(value/tickStep))%2 ? 'av-kpi-minor-tick' : '') + '" x="42" y="' +
-      (y(value) + 4) + '" text-anchor="end">' + safe(fmt(value)) + '</text>').join('') + traces + management + staffLine +
-    '<path d="M' + left + ' 28V176 M' + left + ' ' + zero + 'H' + right + '" class="av-profit-axis"/>' +
-    marks.map((mark, i) => '<circle cx="' + mark.x + '" cy="' + mark.y + '" r="3" stroke="' + color(mark.value) + '" fill="' + (i===0 && marks.length>1 ? 'var(--surface)' : color(mark.value)) +
-      '"><title>' + safe(mark.label + ': ' + format(mark.value)) + '</title></circle>' + (marks.length > 8 && i > 0 && i < marks.length - 1 ? '' : '<text class="av-kpi-point-label" x="' + mark.x + '" y="' + mark.labelY + '" fill="' + color(mark.value) + '" text-anchor="middle">' +
+      (y(value) + 4) + '" text-anchor="end">' + safe(fmt(value)) + '</text>').join('') + traces + management +
+    '<path d="M' + left + ' 28V176 M' + left + ' ' + zero + 'H' + right + '" class="av-profit-axis"/>' + secondaryLine + rightTicks + coverage +
+    marks.map((mark, i) => (options.markerDays && !options.markerDays.has(points[i][2]) ? '' : '<circle cx="' + mark.x + '" cy="' + mark.y + '" r="3" stroke="' + color(mark.value) + '" fill="' + (i===0 && marks.length>1 ? 'var(--surface)' : color(mark.value)) +
+      '"><title>' + safe(mark.label + ': ' + format(mark.value)) + '</title></circle>') + (marks.length > 8 && i > 0 && i < marks.length - 1 ? '' : '<text class="av-kpi-point-label" x="' + mark.x + '" y="' + mark.labelY + '" fill="' + color(mark.value) + '" text-anchor="middle">' +
       safe(format(mark.value)) + '</text>')).join('') +
     ticksX.map(tick=>'<text x="'+x(tick.date)+'" y="194" text-anchor="middle">'+safe(tick.label)+'</text>').join('') +
     '</svg>';
 }
 
-const selectedSeries = Object.create(null);
-const cashUnit = 'млн ₽';
-const groups = [
-  {id:'revenue', icon:'wallet', name:'Выручка', route:'finance', options:[
-    ['revenue','9 месяцев',cashUnit,'nine'], ['revenue','Полный год',cashUnit,'annual']]},
-  {id:'profit', icon:'trend', name:'Чистая прибыль', route:'finance', options:[
-    ['profit','9 месяцев',cashUnit,'nine'], ['profit','Полный год',cashUnit,'annual']]},
-  {id:'margin', icon:'sales', name:'Средняя рентабельность сделок', route:'sales', options:[
-    ['margin','Средняя по позициям','%'], ['weightedMargin','Взвешенная по цене','%']]},
-  {id:'payables', icon:'wallet', name:'Кредиторская задолженность', route:'finance', direction:-1, options:[
-    ['payables','Остаток на дату',cashUnit]]},
-  {id:'loans', icon:'wallet', name:'Займы', route:'finance', direction:-1, options:[
-    ['loans','Остаток на дату',cashUnit], ['loansReceived','Получено за месяц',cashUnit], ['loansRepaid','Погашено за месяц',cashUnit]]},
-  {id:'contracts', icon:'sales', name:'Сделки и стоимость', route:'sales', options:[
-    ['contracts','Число договоров','шт.'], ['contractPrices','Полная цена по месяцам',cashUnit],
-    ['contractAnalysis','Стоимость по анализу',cashUnit], ['salesByContract','Оборот «Продано»',cashUnit]]},
-  {id:'products', icon:'products', name:'Продукты', route:'products', options:[
-    ['attractions','Аттракционы','SKU'], ['otherProducts','Неаттракционы','SKU']]},
-  {id:'team', icon:'people', name:'Команда', route:'people', options:[
-    ['planned','Ставки: всего и занято','ставки'], ['turnover','Текучесть','%']]},
-];
-const notes = {
-  margin:'Простое среднее по позициям с рассчитанной рентабельностью',
-  weightedMargin:'Прибыль / суммарная цена без НДС',
-  contracts:'По датам подписания в выгрузке покупателей',
-  contractPrices:'НД · полная цена не подтверждена по всем договорам',
-  contractAnalysis:'Срез анализа, цена с НДС',
-  salesByContract:'Оборот по договорам месяца за весь период выгрузки',
-  attractions:'Номенклатура по срезу КБ',
-  otherProducts:'НД · нет подтверждённого перечня',
-  loansReceived:'ДДС, поступление за месяц',
-  loansRepaid:'ДДС, погашение за месяц',
-  planned:'Сплошная линия — всего, пунктир — занято',
-  turnover:'Январь–ноябрь 2026 отмечен отдельной точкой',
-};
-const noDelta = new Set(['contracts','contractPrices','contractAnalysis','salesByContract','loansReceived','loansRepaid','turnover']);
+function smoothCurve(marks) {
+  return marks.map((mark, i) => {
+    if (!i) return `M${mark.x} ${mark.y}`;
+    const previous = marks[i - 1];
+    const third = (mark.x - previous.x) / 3;
+    return `C${previous.x + third} ${previous.y} ${mark.x - third} ${mark.y} ${mark.x} ${mark.y}`;
+  }).join(' ');
+}
 
-function seriesPoints(key, unit, basis) {
+function spaceOverviewLabels() {
+  for (const chart of document.querySelectorAll('.av-owner-kpis .av-profit-chart')) {
+    const labels = [...chart.querySelectorAll('.av-kpi-point-label')];
+    const taken = [...chart.querySelectorAll('text:not(.av-kpi-point-label), circle')]
+      .filter(node => getComputedStyle(node).display !== 'none').map(node => node.getBBox());
+    const width = chart.viewBox.baseVal.width;
+    for (const label of labels) {
+      const x = Number(label.getAttribute('x'));
+      const y = Number(label.getAttribute('y'));
+      let placed = false;
+      for (const [dx, dy] of [[0,0],[-18,0],[18,0],[0,-15],[0,15],[-25,-15],[25,-15],[-25,15],[25,15]]) {
+        label.setAttribute('x', x + dx);
+        label.setAttribute('y', y + dy);
+        const box = label.getBBox();
+        if (box.x < 2 || box.x + box.width > width - 2 || box.y < 0 || box.y + box.height > 185) continue;
+        if (taken.some(other => box.x < other.x + other.width + 2 && box.x + box.width + 2 > other.x &&
+          box.y < other.y + other.height + 2 && box.y + box.height + 2 > other.y)) continue;
+        taken.push(box);
+        placed = true;
+        break;
+      }
+      if (!placed) label.style.display = 'none';
+    }
+  }
+}
+
+const cashUnit = 'млн ₽';
+const dateInRange = day => day >= overviewRange.from && day <= overviewRange.to;
+
+function seriesPoints(key, unit) {
   const scale = unit === cashUnit ? 1 / 1e6 : unit === '%' ? 100 : 1;
   return (window.AVERA_OVERVIEW_SERIES[key] || [])
-    .filter(([day, , , kind]) => day >= overviewRange.from && day <= overviewRange.to && (!basis || basis === kind))
+    .filter(([day]) => dateInRange(day))
     .map(([day, value, label, , partial]) => [label, value * scale, day, partial]);
 }
 
-function overviewCard(group) {
-  const index = Number(selectedSeries[group.id] || 0);
-  const [key, label, unit, basis] = group.options[index];
-  const points = seriesPoints(key, unit, basis);
-  const secondary = key === 'planned' ? seriesPoints('occupied', unit) : [];
+function summaryCard({id, icon, label, route, unit, points, note = '', value, secondary = [], options}) {
+  const last = points.at(-1);
+  const displayed = value ?? (last ? fmt(last[1]) + ' ' + unit : 'НД');
+  const description = note || (last ? last[0] : 'Нет среза в выбранном периоде');
+  return card(icon, label, displayed, description, route,
+    overviewChart(id, points, label + ', ' + unit, fmt, secondary, options), '', '');
+}
+
+function statusCard(icon, label, value, note, route) {
+  return `<article class="av-metric av-status-card">
+    <a class="av-label av-kpi-link" href="#${route}">${window.avIcon(icon)}${safe(label)}</a>
+    <div class="av-number">${safe(value)}</div><div class="av-muted">${safe(note)}</div>
+  </article>`;
+}
+
+function amountCard(id, label, note) {
+  const points = seriesPoints(id, cashUnit);
+  return summaryCard({id, icon:'wallet', label, route:'finance', unit:cashUnit, points, note});
+}
+
+function financeCard(id, label, icon) {
+  const points = seriesPoints(id, cashUnit);
+  const periods = points.map(([period]) => period).join(' → ');
+  const note = periods ? periods + ' · годовые и девятимесячные срезы ОФР' : '';
+  return summaryCard({id, icon, label, route:'finance', unit:cashUnit, points, note});
+}
+
+function salesCard(contracts) {
+  const count = contracts.reduce((total, [,value]) => total + value, 0);
+  return summaryCard({id:'contracts', icon:'sales', label:'Договоры по датам подписания', route:'sales', unit:'шт.',
+    points:contracts, value:contracts.length ? fmt(count) + ' шт.' : 'НД',
+    note:'Даты договоров из выгрузки покупателей'});
+}
+
+function marginCard(contracts) {
+  const points = seriesPoints('dealPrices', cashUnit);
+  const secondary = seriesPoints('dealRates', '%');
+  const count = contracts.reduce((total, [,value]) => total + value, 0);
+  return summaryCard({id:'deal-margin', icon:'sales', label:'Стоимость и рентабельность договоров', route:'sales',
+    unit:cashUnit, points, secondary, options:{rightAxis:true, contractDates:contracts},
+    value:fmt(count) + ' договоров в выгрузке · ' + fmt(points.length) + ' предварительных совпадений',
+    note:'Сплошная — цена с НДС, млн ₽ (слева). Пунктир — рентабельность, % (справа). Штрихи — даты договоров.'});
+}
+
+function balanceCard() {
+  const points = seriesPoints('payables', cashUnit);
+  const secondary = seriesPoints('receivables', cashUnit);
   const latest = points.at(-1);
-  const value = key === 'contracts' || key === 'salesByContract'
-    ? points.reduce((total, point) => total + point[1], 0) : latest?.[1];
-  const displayed = secondary.length && latest
-    ? fmt(latest[1]) + ' / ' + fmt(secondary.at(-1)[1]) + ' ставки'
-    : latest ? fmt(value) + ' ' + unit : 'НД';
-  const period = points.length > 1 ? points[0][0] + ' → ' + latest[0] : latest?.[0];
-  const note = [period, notes[key]].filter(Boolean).join(' · ') || 'Нет среза в выбранном периоде';
-  const diff = points.length > 1 && !noDelta.has(key) ? latest[1] - points[0][1] : null;
-  const direction = group.direction ?? (key === 'planned' ? 0 : 1);
-  const tone = !diff || !direction ? 'neutral' : diff * direction > 0 ? 'good' : 'bad';
-  const delta = diff === null ? '' : '<span class="av-kpi-delta av-kpi-delta-' + tone + '">' +
-    safe((diff > 0 ? '+' : '') + fmt(diff) + ' ' + (unit === '%' ? 'п.п.' : unit)) + '</span>';
-  const controls = group.options.length < 2 ? '' : '<select class="av-overview-series" aria-label="' +
-    safe(group.name + ': ряд') + '" data-overview-series="' + group.id + '">' +
-    group.options.map((option, i) => '<option value="' + i + '"' + (i === index ? ' selected' : '') + '>' +
-      safe(option[1]) + '</option>').join('') + '</select>';
-  const chart = overviewChart(group.id, points, label + ', ' + unit, fmt, secondary);
-  return card(group.icon, group.name, displayed, note, group.route, chart, delta, controls);
+  const receive = latest && secondary.find(point => point[2] === latest[2]);
+  return summaryCard({id:'balances', icon:'wallet', label:'Кредиторская и дебиторская задолженность', route:'finance',
+    unit:cashUnit, points, secondary, value:latest && receive ? fmt(latest[1]) + ' / ' + fmt(receive[1]) + ' ' + cashUnit : undefined,
+    note:latest ? 'На ' + latest[0] + ' · сплошная — кредиторка, пунктир — дебиторка' : ''});
+}
+
+function loanCard() {
+  const points = seriesPoints('loanCash', cashUnit);
+  const receipts = seriesPoints('loanReceipts', cashUnit);
+  return summaryCard({id:'loan-cash', icon:'wallet', label:'Займы · накопленное движение по ДДС', route:'finance',
+    unit:cashUnit, points, options:{markerDays:new Set(receipts.map(point=>point[2]))},
+    note:points.length ? 'Получено минус погашено · точки — месяцы с поступлениями (' + receipts.length + ')' : ''});
+}
+
+function productsCard() {
+  const current = seriesPoints('attractions', 'SKU');
+  const points = dateInRange('2024-01-01') ? [['Условный старт',0,'2024-01-01'], ...current] : current;
+  const secondary = [['Начало периода управления',0,'2026-10-26'],['Текущий срез',0,'2026-11-09']]
+    .filter(point=>dateInRange(point[2]));
+  return summaryCard({id:'product-pair', icon:'products', label:'Продуктовый портфель', route:'products', unit:'SKU',
+    points, secondary, value:current.length ? fmt(current.at(-1)[1]) + (secondary.length ? ' / 0 SKU' : ' SKU') : 'НД',
+    note:'Сплошная — аттракционы, стартовый ноль условный. Пунктир — неаттракционы с 26.10.2026.'});
+}
+
+function teamCard() {
+  const planned = seriesPoints('planned', 'ставки');
+  const occupied = seriesPoints('occupied', 'ставки');
+  const history = seriesPoints('headcount', 'чел.');
+  if (dateInRange('2024-01-01')) history.unshift(['Условный старт',0,'2024-01-01']);
+  const latest = planned.at(-1);
+  const actual = latest && occupied.find(point => point[2] === latest[2]);
+  return summaryCard({id:'team-history', icon:'people', label:'Команда', route:'people', unit:'ставки',
+    points:[...history,...planned], secondary:occupied, options:{branch:true},
+    value:actual ? fmt(latest[1]) + ' / ' + fmt(actual[1]) + ' ставки' : history.length ? fmt(history.at(-1)[1]) + ' чел.' : 'НД',
+    note:'2024–2025 — средняя численность. С 16.10.2026 сплошная — всего ставок, пунктир — занято.'});
 }
 
 window.ownerOverview = function () {
   const {from, to} = overviewRange;
   const controls = '<div class="panel cmp-controls" aria-label="Единый период обзора"><div class="cmp-dates">' +
     [['from','От'],['to','До']].map(([key,label])=>'<div class="cmp-date-field"><label for="av-overview-'+key+'">'+label+
-      '</label><input type="date" id="av-overview-'+key+'" data-overview-date="'+key+'" value="'+safe(overviewRange[key])+'"></div>').join('') +
-    '</div>' + (from && to && from<=to ? '' : '<p class="av-muted">Укажите корректный диапазон дат.</p>') + '</div>';
+      '</label><input type="date" id="av-overview-'+key+'" data-overview-date="'+key+'" value="'+safe(overviewRange[key])+'"></div>').join('') + '</div></div>';
+  if (!from || !to || from > to) return controls + '<p class="av-muted">Укажите корректный диапазон дат.</p>';
+  const contracts = seriesPoints('contractDates', 'шт.');
+  const statusVisible = dateInRange('2026-11-09');
+  const sections = [
+    ['Финансовый результат',[financeCard('revenue','Выручка','wallet'),financeCard('profit','Чистая прибыль','trend'),
+      amountCard('payments','Оплаты от покупателей','Помесячные поступления по ДДС')]],
+    ['Продажи',[salesCard(contracts),statusCard('sales','На подписании',statusVisible ? '1 договор · 3 крупных продукта' : 'НД',
+      statusVisible ? 'Оперативный срез на 09.11.2026 · сумма и дата подписания уточняются' : 'Нет среза в выбранном периоде','sales')]],
+    ['Исполнение заказа',[statusCard('sales','Заказ в работе',statusVisible ? '1 крупный заказ' : 'НД',
+      statusVisible ? 'Оперативный срез на 09.11.2026 · ближайшая отгрузка и готовность КД уточняются' : 'Нет среза в выбранном периоде','production')]],
+    ['Маржа',[marginCard(contracts)]],
+    ['Деньги и обязательства',[amountCard('cash','Остаток денег по ДДС','Остаток по месячной выгрузке ДДС'),balanceCard(),loanCard()]],
+    ['Продуктовый портфель',[productsCard()]],
+    ['Команда',[teamCard()]],
+    ['Что изменилось с 26 октября',[statusCard('people','Штатная расстановка · 16.10 → 06.11',
+      dateInRange('2026-11-06') ? '+7 занятых ставок' : 'НД',
+      dateInRange('2026-11-06') ? '58,46 → 65,46 ставки. Решение и его вклад в изменение пока не подтверждены' : 'Нет среза в выбранном периоде','people')]]
+  ];
   return controls + '<section class="av-grid av-owner-kpis" aria-label="Показатели компании">' +
-    groups.map(overviewCard).join('') + '</section>';
+    sections.map(([name, cards], i) => '<h2 class="av-overview-section">' + (i+1) + '. ' + safe(name) + '</h2>' + cards.join('')).join('') + '</section>';
 };
 $('#content').addEventListener('change', event=>{
-  const seriesKey = event.target.dataset.overviewSeries;
-  if (seriesKey && current === 'overview') {
-    selectedSeries[seriesKey] = event.target.value;
-    render();
-    $(`[data-overview-series="${seriesKey}"]`)?.focus();
-    return;
-  }
   const key = event.target.dataset.overviewDate;
   if (!key || current !== 'overview') return;
   overviewRange[key] = event.target.value;
@@ -231,9 +307,11 @@ function labels(){document.querySelector("main").classList.toggle("av-overview-t
 window.applyActualLabels=function(){
   labels();
   if(current==='overview'){
+    $('#title').textContent='Сводка по компании';
     $('#subtitle').textContent='';
     document.querySelector('main > .notice').textContent='';
     document.querySelector('.asof').textContent='Даты срезов указаны в карточках';
+    spaceOverviewLabels();
   }
 };render();
 })();
