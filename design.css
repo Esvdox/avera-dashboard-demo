@@ -143,3 +143,5 @@ body#avera-owner{margin:0;font:var(--text-base)/1.45 var(--font-ui);background:v
 #avera-owner.dark .av-profit-delta{color:#72e4a1}
 #avera-owner .av-profit-delta.av-profit-decline{color:#bd3d56}
 #avera-owner.dark .av-profit-delta.av-profit-decline{color:#ff98aa}
+
+#avera-owner .av-kpi-gridline{fill:none;stroke:var(--line);stroke-dasharray:3 4}

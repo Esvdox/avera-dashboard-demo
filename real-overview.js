@@ -10,56 +10,57 @@ function card(icon, label, value, note, route, chart) {
   </a>`;
 }
 
-function reportBars(points) {
-  const values = points.filter(([, value]) => Number.isFinite(value));
-  if (!values.length) return '<p class="av-muted">Нет отчётных значений</p>';
-  const min = Math.min(0, ...values.map(([, value]) => value));
-  const max = Math.max(0, ...values.map(([, value]) => value));
-  const scale = max - min || 1;
-  const zero = -min / scale * 100;
-  return `<ul class="av-kpi-bars">${values.map(([label, value]) => {
-    const left = (Math.min(0, value) - min) / scale * 100;
-    return `<li><span>${safe(label)}</span><div class="av-kpi-track" aria-hidden="true">
-      <i class="${value < 0 ? 'av-kpi-negative' : ''}" style="left:${left}%;width:${Math.abs(value) / scale * 100}%"></i>
-      ${min < 0 && max > 0 ? `<b style="left:${zero}%"></b>` : ''}
-      </div><strong>${safe(money(value))}</strong></li>`;
-  }).join('')}</ul>`;
-}
-
-function shareBar(value, total, label) {
-  if (!total) return '<p class="av-muted">Нет данных для расчёта доли</p>';
-  return `<progress class="av-kpi-progress" value="${value}" max="${total}" aria-label="${safe(label)}"></progress>
-    <p class="av-muted">${safe(label)} · ${fmt(value / total * 100)}%</p>`;
-}
 const overviewRange = {from: '2025-09-30', to: new Intl.DateTimeFormat('sv-SE', {timeZone:'Europe/Moscow'}).format(new Date())};
 const missing = '<p class="av-muted">Нет данных за выбранный период</p>';
 
-function profitChart(points) {
-  if (points.length < 2) return points.length ? reportBars(points) : missing;
-  const [[firstLabel, first], [lastLabel, last]] = points;
-  const min = Math.min(0, first, last);
-  const max = Math.max(0, first, last);
-  const pad = ((max - min) || 1000) * .12;
-  const y = value => 16 + (max + pad - value) / (max - min + 2 * pad) * 145;
-  const zero = y(0), a = y(first), b = y(last);
-  const curve = 'M82 ' + a + ' C175 ' + a + ' 245 ' + b + ' 338 ' + b;
-  const area = curve + ' V' + zero + ' H82 Z';
+function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
+  if (!points.length) return missing;
+  const values = points.map(([, value]) => value);
+  const minimum = Math.min(0, ...values);
+  const maximum = Math.max(ceiling, 0, ...values);
+  const span = maximum - minimum || 1;
+  const step = 10 ** Math.floor(Math.log10(span / 4));
+  const tickStep = Math.ceil(span / (4 * step)) * step;
+  const low = Math.floor(minimum / tickStep) * tickStep;
+  const high = Math.max(tickStep, Math.ceil(maximum / tickStep) * tickStep);
+  const y = value => 18 + (high - value) / (high - low) * 136;
+  const zero = y(0);
   const color = value => value < 0 ? 'var(--av-profit-loss)' : 'var(--accent)';
-  return '<svg class="av-profit-chart" viewBox="0 0 420 193" role="img" aria-label="Чистая прибыль, млн ₽. ' +
-    safe(firstLabel + ': ' + money(first) + '; ' + lastLabel + ': ' + money(last)) + '">' +
-    '<defs><clipPath id="av-profit-up"><rect width="420" height="' + zero + '"/></clipPath>' +
-    '<clipPath id="av-profit-down"><rect y="' + zero + '" width="420" height="' + (193 - zero) + '"/></clipPath></defs>' +
-    ['up','down'].map((side,i)=>'<g clip-path="url(#av-profit-'+side+')" color="'+color(i?-1:1)+'"><path d="'+area+'" fill="currentColor" opacity=".25"/><path d="'+curve+'" fill="none" stroke="currentColor" stroke-width="2.5"/></g>').join('') +
-    '<path d="M65 16V161 M65 '+zero+'H392" class="av-profit-axis"/>' +
-    [[max, y(max)], [0,zero], [min,y(min)]].filter(([v,py],i)=>i===1||Math.abs(py-zero)>=13).map(([v,py])=>'<text x="59" y="'+(py+4)+'" text-anchor="end">'+fmt(v/1000)+'</text>').join('') +
-    [[82,a,first,firstLabel],[338,b,last,lastLabel]].map(([x,py,v,label])=>'<circle cx="'+x+'" cy="'+py+'" r="3.5" fill="'+color(v)+'"/><text x="'+x+'" y="'+(py-9)+'" fill="'+color(v)+'" text-anchor="middle">'+money(v)+'</text><text x="'+x+'" y="181" text-anchor="middle">'+safe(label)+'</text>').join('') +
+  const marks = points.map(([label, value], i) => ({
+    label, value, x: points.length === 1 ? 224 : 88 + i * 268 / (points.length - 1), y: y(value)
+  }));
+  const first = marks[0];
+  const last = marks.at(-1);
+  let curve = 'M' + first.x + ' ' + first.y;
+  marks.slice(1).forEach((mark, i) => {
+    const previous = marks[i];
+    const middle = (previous.x + mark.x) / 2;
+    curve += ' C' + middle + ' ' + previous.y + ' ' + middle + ' ' + mark.y + ' ' + mark.x + ' ' + mark.y;
+  });
+  const area = curve + ' V' + zero + ' H' + first.x + ' Z';
+  const ticks = Array.from({length: Math.round((high - low) / tickStep) + 1}, (_, i) => (low + i * tickStep));
+  const clip = side => 'av-kpi-' + id + '-' + side;
+  const traces = marks.length < 2 ? '' :
+    '<defs><clipPath id="' + clip('up') + '"><rect width="420" height="' + zero + '"/></clipPath>' +
+    '<clipPath id="' + clip('down') + '"><rect y="' + zero + '" width="420" height="' + (190 - zero) + '"/></clipPath></defs>' +
+    ['up', 'down'].map((side, i) => '<g clip-path="url(#' + clip(side) + ')" color="' + color(i ? -1 : 1) +
+      '"><path d="' + area + '" fill="currentColor" opacity=".25"/><path d="' + curve + '" fill="none" stroke="currentColor" stroke-width="2.5"/></g>').join('');
+  return '<svg class="av-profit-chart" viewBox="0 0 420 190" role="img" aria-label="' +
+    safe(unit + '. ' + marks.map(mark => mark.label + ': ' + format(mark.value)).join('. ')) + '">' +
+    ticks.map(value => '<path d="M65 ' + y(value) + 'H392" class="av-kpi-gridline"/><text x="59" y="' +
+      (y(value) + 4) + '" text-anchor="end">' + safe(fmt(value)) + '</text>').join('') + traces +
+    '<path d="M65 18V154 M65 ' + zero + 'H392" class="av-profit-axis"/>' +
+    marks.map(mark => '<circle cx="' + mark.x + '" cy="' + mark.y + '" r="3.5" fill="' + color(mark.value) +
+      '"/><text x="' + mark.x + '" y="' + (mark.y - 8) + '" fill="' + color(mark.value) + '" text-anchor="middle">' +
+      safe(format(mark.value)) + '</text><text x="' + mark.x + '" y="177" text-anchor="middle">' + safe(mark.label) + '</text>').join('') +
     '</svg>';
 }
 
 window.ownerOverview = function () {
   const {from, to} = overviewRange;
   const inRange = day => Boolean(from && to && day && day >= from && day <= to);
-  const staffing = (window.AVERA_STAFFING_HISTORY || []).filter(row=>inRange(row.date)).at(-1);
+  const staffingHistory = (window.AVERA_STAFFING_HISTORY || []).filter(row=>inRange(row.date));
+  const staffing = staffingHistory.at(-1);
   const kdDate = window.AVERA_KD.asOf;
   const products = inRange(date(kdDate)) ? window.AVERA_METRICS.products() : null;
   const finance = window.AVERA_ACCOUNTING;
@@ -76,21 +77,22 @@ window.ownerOverview = function () {
   const deltaNote = delta === null ? '' : '<p class="av-profit-delta'+(delta<0?' av-profit-decline':'')+'"><b>'+(delta>0?'+':'')+money(delta)+' млн ₽</b>'+(profit[0][1]<0&&profit[1][1]>0?' · выход в прибыль':'')+'</p>';
   const financeCard = (icon,label,series,chart) => card(icon,label,series.length ? money(series.at(-1)[1])+' млн ₽':'НД',
     series.length ? series.map(([period])=>period).join(' → ')+' · млн ₽' : 'Нет среза в выбранном периоде','finance',chart);
+  const financialChart = (id, series) => overviewChart(id, series.map(([label, value]) => [label, value / 1000]), 'млн ₽', value => money(value * 1000));
   const controls = '<div class="panel cmp-controls" aria-label="Единый период обзора"><div class="cmp-dates">' +
     [['from','От'],['to','До']].map(([key,label])=>'<div class="cmp-date-field"><label for="av-overview-'+key+'">'+label+
       '</label><input type="date" id="av-overview-'+key+'" data-overview-date="'+key+'" value="'+safe(overviewRange[key])+'"></div>').join('') +
     '</div><p class="av-muted">'+(from && to && from<=to?'Единый период для всех показателей. Показаны отчётные срезы внутри выбранных дат.':'Укажите корректный диапазон дат.')+'</p></div>';
   return controls + '<section class="av-grid av-owner-kpis" aria-label="Показатели компании">' + [
-    financeCard('wallet','Выручка',revenue,reportBars(revenue)),
-    financeCard('trend','Чистая прибыль',profit,deltaNote+profitChart(profit)),
+    financeCard('wallet','Выручка',revenue,financialChart('revenue',revenue)),
+    financeCard('trend','Чистая прибыль',profit,financialChart('profit',profit)+deltaNote),
     card('sales','Средняя маржинальность сделок','НД','Нет подтверждённого среза CRM','sales',missing),
-    financeCard('wallet','Кредиторская задолженность',debt,reportBars(debt)),
+    financeCard('wallet','Кредиторская задолженность',debt,financialChart('debt',debt)),
     card('people','Численность сотрудников',staffing?fmt(staffing.planned)+' / '+fmt(staffing.planned-staffing.vacant):'НД',
       'Ставок всего / занято'+(staffing?' · '+staffing.date.split('-').reverse().join('.') : ''),'people',
-      staffing?shareBar(staffing.planned-staffing.vacant,staffing.planned,'Доля занятых ставок'):missing),
+      overviewChart('staffing',staffingHistory.map(row=>[row.date.split('-').reverse().join('.'),row.planned-row.vacant]),'Занятые ставки',fmt,Math.max(0,...staffingHistory.map(row=>row.planned)))),
     card('products','Готовность КД',products?products.complete+' из '+products.count+' SKU':'НД',
       products?'КД на 100% · '+kdDate:'Нет среза в выбранном периоде','products',
-      products?shareBar(products.complete,products.count,'Доля SKU с КД на 100%'):missing)
+      products && products.count ? overviewChart('kd',[[kdDate,products.complete/products.count*100]],'Доля SKU с КД на 100%', value => fmt(value)+'%',100) : missing)
   ].join('') + '</section>';
 };
 $('#content').addEventListener('change', event=>{
