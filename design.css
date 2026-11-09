@@ -133,3 +133,13 @@ body#avera-owner{margin:0;font:var(--text-base)/1.45 var(--font-ui);background:v
 #avera-owner .av-kpi-track i.av-kpi-negative{background:#d75c70}
 #avera-owner .av-kpi-track b{width:1px;background:var(--muted)}
 #avera-owner .av-kpi-progress{width:100%;height:12px;accent-color:var(--accent)}
+
+#avera-owner .av-profit-chart{display:block;width:100%;max-width:740px;margin:auto;--av-profit-loss:#bd3d56}
+#avera-owner.dark .av-profit-chart{--av-profit-loss:#ff98aa}
+#avera-owner .av-profit-chart text{font-size:11px}
+#avera-owner .av-profit-chart text:not([fill]){fill:var(--muted)}
+#avera-owner .av-profit-axis{fill:none;stroke:var(--muted)}
+#avera-owner .av-profit-delta{color:#168650}
+#avera-owner.dark .av-profit-delta{color:#72e4a1}
+#avera-owner .av-profit-delta.av-profit-decline{color:#bd3d56}
+#avera-owner.dark .av-profit-delta.av-profit-decline{color:#ff98aa}
