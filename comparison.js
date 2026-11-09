@@ -4,7 +4,7 @@ tabs.splice(1, 0, ['comparison', 'Сравнение', 'Сравнение', '']
 window.avNavIcons.comparison = 'trend';
 
 let comparisonView = new URLSearchParams(location.search).get('view') === 'charts' ? 'chart' : 'table';
-const comparisonDates = {from: '2024-01-01', to: comparisonToday()};
+const comparisonDates = {from: '2025-09-30', to: comparisonToday()};
 
 function comparisonData() {
   const metrics = window.AVERA_METRICS;
@@ -22,18 +22,12 @@ function comparisonData() {
     value: row[1], periodLabel: row[0], partial: row[0].includes('ноябрь')
   }));
   const start = baseline.asOf.split('.').reverse().join('-');
-  const staffing = metrics.staffing();
-  const loans = metrics.loanSeries().map(r=>({...r,value:Number.isFinite(r.value)?r.value/1000:null}));
-  const profitSeries = (rows, year, suffix) => [2,3].map((column,index)=>{
-    const value=metrics.value(rows,'2400',column);
-    return {date:`${year+index}-${suffix}`,value:Number.isFinite(value)?value/1000:null};
-  });
-  const staffingMetrics = [
-    ['Предусмотрено','planned'], ['Занято','occupied'], ['Вакантно','vacant']
-  ].map(([name,key]) => ({name: name + ' по ШР', unit: 'ставки', icon: 'people',
-    comparableSnapshots: true, discrete: true,
-    points: staffing.map(row=>({date:row.date,value:row[key]}))
-  }));
+  const staffing = window.AVERA_STAFFING;
+  const staffingMetrics = staffing ? [
+    ['Предусмотрено', staffing.planned], ['Занято', staffing.planned - staffing.vacant], ['Свободно', staffing.vacant]
+  ].map(([name, value]) => ({name: name + ' по ШР', unit: 'ставки', icon: 'people', points: [
+    {date: staffing.asOf.split('.').reverse().join('-'), value}
+  ]})) : [];
   return [
     {name: 'Выручка', unit: 'млн ₽', before: revenue[1].value, period: '9 мес. 2026', points: revenue},
     {name: 'Текучесть', unit: '%', before: turnover[1]?.value, period: '2025', points: turnover},
@@ -42,11 +36,6 @@ function comparisonData() {
     {name: 'Сделки', unit: 'шт.', points: []},
     {name: 'Маржа сделок', unit: '%', points: []},
     {name: 'Выручка за год', unit: 'млн ₽', icon: 'wallet', comparable: true, points: annualRevenue},
-    {name: 'Чистая прибыль · 9 месяцев', unit: 'млн ₽', icon: 'trend', comparable: true, points: profitSeries(window.AVERA_ACCOUNTING.incomeNine,2025,'09-30')},
-    {name: 'Чистая прибыль за год', unit: 'млн ₽', icon: 'trend', comparable: true, points: profitSeries(window.AVERA_ACCOUNTING.incomeAnnual,2024,'12-31')},
-    {name: 'Кредиторская задолженность', unit: 'млн ₽', icon: 'wallet', direction: 'lower', comparableSnapshots: true,
-      points: metrics.balanceSeries('1520').map(r=>({...r,value:Number.isFinite(r.value)?r.value/1000:null}))},
-    {name: 'Остаток займов по балансу', unit: 'млн ₽', icon: 'wallet', direction: 'lower', comparableSnapshots: true, discrete: true, points: loans},
     ...staffingMetrics
   ];
 }
@@ -74,7 +63,22 @@ function comparisonAxis(width, from, to) {
   const right = width - 26;
   const x = date => left + (date - start) / (end - start) * (right - left);
   const maxTicks = Math.max(3, Math.floor((right - left) / 72));
-  const ticks = window.avTimeTicks(start,end,maxTicks).map(tick=>({x:x(tick.date),label:tick.label}));
+  const days = (end - start) / comparisonDay;
+  const unit = days <= 45 ? 'day' : days <= 730 ? 'month' : 'year';
+  const step = Math.max(1, Math.ceil(days / (maxTicks * {day: 1, month: 30, year: 365}[unit])));
+  const cursor = new Date(start);
+  if (unit !== 'day') cursor.setUTCDate(1);
+  if (unit === 'year') cursor.setUTCMonth(0);
+  const formatter = new Intl.DateTimeFormat('ru-RU', {
+    timeZone: 'UTC', ...(unit === 'day' ? {day: '2-digit', month: '2-digit'} : unit === 'month' ? {month: 'short', year: '2-digit'} : {year: 'numeric'})
+  });
+  const ticks = [];
+  while (+cursor <= end) {
+    if (+cursor >= start) ticks.push({x: x(+cursor), label: formatter.format(cursor)});
+    if (unit === 'day') cursor.setUTCDate(cursor.getUTCDate() + step);
+    else if (unit === 'month') cursor.setUTCMonth(cursor.getUTCMonth() + step);
+    else cursor.setUTCFullYear(cursor.getUTCFullYear() + step);
+  }
   return {left, right, x, start, end, selectedStart, selectedEnd, ticks, arrival, today};
 }
 
@@ -86,72 +90,30 @@ function periodGraph(metric, index, axis, width) {
   const periods = selected.map((point, i) => ({point, x: dateX(Date.parse(point.date)),
     className: i === 0 && selected.length > 1 ? 'cmp-series-b' : 'cmp-series-a'}));
   const maximum = Math.max(1, metric.startBaseline ?? 0, ...observations.map(point => point.value));
-  const minimum = Math.min(0, metric.startBaseline ?? 0, ...observations.map(point => point.value));
-  const targetStep = (maximum - minimum) * 1.1 / 5;
+  const targetStep = maximum * 1.1 / 5;
   const magnitude = 10 ** Math.floor(Math.log10(targetStep));
   const step = Math.max(['SKU', 'шт.'].includes(metric.unit) ? 1 : 0,
     [1, 2, 2.5, 5, 10].find(value => value * magnitude >= targetStep) * magnitude);
   const topTick = Math.ceil(maximum * 1.1 / step);
   const bottom = 176;
-  const lowTick = Math.floor(minimum * 1.1 / step);
-  const y = value => bottom - ((value - lowTick * step) / (step * (topTick - lowTick))) * 156;
-  const zero = y(0);
-  const grid = Array.from({length: topTick - lowTick + 1}, (_, tick) => {
-    const value = (tick + lowTick) * step;
+  const y = value => bottom - (value / (step * topTick)) * 156;
+  const grid = Array.from({length: topTick + 1}, (_, tick) => {
+    const value = tick * step;
     return `<path d="M${left} ${y(value)}H${right}"/><text x="${left - 14}" y="${y(value) + 3}" text-anchor="end">${fmt(value)}${metric.unit === '%' ? '%' : ''}</text>`;
   }).join('');
   const ordered = periods.filter(series => !series.point.partial);
   const coordinates = ordered.map(series => [series.x, y(series.point.value)]);
-  const curve = coordinates.map(([x, py], i) => {
-    if (!i) return 'M' + x + ' ' + py;
-    const [previousX, previousY] = coordinates[i - 1];
-    const third = (x - previousX) / 3;
-    return 'C' + (previousX + third) + ' ' + previousY + ' ' + (x - third) + ' ' + py + ' ' + x + ' ' + py;
-  }).join(' ');
+  const comparisonLine = coordinates.map(pair => pair.join(',')).join(' ');
   const first = coordinates[0];
   const last = coordinates.at(-1);
-  const area = first && last ? curve + ' V' + zero + ' H' + first[0] + ' Z' : '';
-  const arrivalX = dateX(axis.arrival);
-  const crossing = coordinates.findIndex(([x], i) => i > 0 && coordinates[i-1][0] <= arrivalX && x >= arrivalX);
-  let arrivalY = Number.isFinite(metric.startBaseline) ? y(metric.startBaseline) : null;
-  if (crossing > 0) {
-    const [x0,y0] = coordinates[crossing-1];
-    const [x1,y1] = coordinates[crossing];
-    const t = (arrivalX-x0)/(x1-x0);
-    arrivalY = y0+(y1-y0)*t*t*(3-2*t);
-  }
-  const arrivalFillId = 'cmp-arrival-fill-' + index;
-  const arrivalClipId = 'cmp-arrival-clip-' + index;
-  const arrivalFill = '<defs><linearGradient id="' + arrivalFillId + '">' +
-    '<stop stop-color="var(--cmp-arrival-color)" stop-opacity=".38"/><stop offset="1" stop-color="var(--cmp-arrival-color)" stop-opacity=".10"/>' +
-    '</linearGradient><clipPath id="' + arrivalClipId + '"><rect x="' + arrivalX + '" y="20" width="' + (right-arrivalX) + '" height="156"/></clipPath></defs>';
-  const arrivalArea = coordinates.length > 1 && last[0] > arrivalX
-    ? '<path d="' + area + '" fill="url(#' + arrivalFillId + ')" clip-path="url(#' + arrivalClipId + ')"/>'
-    : Number.isFinite(metric.startBaseline)
-      ? '<rect x="' + arrivalX + '" y="' + arrivalY + '" width="' + (right-arrivalX) + '" height="' + (bottom-arrivalY) + '" fill="url(#' + arrivalFillId + ')"/>'
-      : '';
-  const arrivalLine = '<path class="cmp-after-arrival' + (arrivalY === null ? ' cmp-arrival-context' : '') +
-    '" d="M' + arrivalX + ' ' + (arrivalY === null ? bottom : zero) + 'V' + (arrivalY ?? 20) + '"><title>Приход · 26.10.2026</title></path>';
   const fillId = `cmp-period-fill-${index}`;
-  const trace = coordinates.length > 1 ? ['positive','negative'].map((side,i)=>{
-    const key = fillId + '-' + side;
-    const color = i ? 'var(--cmp-loss)' : 'var(--accent)';
-    return `<defs><clipPath id="${key}-clip"><rect x="${left}" y="${i ? zero : 20}" width="${right-left}" height="${i ? bottom-zero : zero-20}"/></clipPath><linearGradient id="${key}" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="${i ? bottom : 20}" y2="${zero}"><stop stop-color="${color}" stop-opacity=".34"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><g clip-path="url(#${key}-clip)"><path fill="url(#${key})" d="${area}"/><path class="cmp-period-trace" style="stroke:${color}" vector-effect="non-scaling-stroke" d="${curve}"/></g>`;
-  }).join('') + arrivalArea : '';
-  const partialTrace = periods.map((series,i)=>{
-    if(!i || !(series.point.partial || periods[i-1].point.partial)) return '';
-    const previous=periods[i-1], x0=previous.x, x1=series.x;
-    const y0=y(previous.point.value), y1=y(series.point.value), third=(x1-x0)/3;
-    return `<path class="cmp-period-trace cmp-partial-trace" vector-effect="non-scaling-stroke" stroke-dasharray="4 4" d="M${x0} ${y0} C${x0+third} ${y0} ${x1-third} ${y1} ${x1} ${y1}"/>`;
-  }).join('');
-  const secondaryPoints = (metric.secondaryPoints || []).filter(p=>Number.isFinite(p.value) && Date.parse(p.date)>=selectedStart && Date.parse(p.date)<=selectedEnd).sort((a,b)=>a.date.localeCompare(b.date));
-  const secondaryCoordinates = secondaryPoints.map(p=>[dateX(Date.parse(p.date)),y(p.value)]);
-  const secondaryCurve = secondaryCoordinates.map(([x,py],i)=>{
-    if(!i) return 'M'+x+' '+py;
-    const [px,yp]=secondaryCoordinates[i-1], third=(x-px)/3;
-    return 'C'+(px+third)+' '+yp+' '+(x-third)+' '+py+' '+x+' '+py;
-  }).join(' ');
-  const secondaryTrace = secondaryCoordinates.length ? '<g class="cmp-occupied-series">' + (secondaryCoordinates.length>1 ? '<path class="cmp-period-trace" vector-effect="non-scaling-stroke" stroke-dasharray="4 4" d="'+secondaryCurve+'"/>' : '') + secondaryCoordinates.map(([x,py],i)=>'<circle cx="'+x+'" cy="'+py+'" r="3" fill="var(--surface)" stroke="var(--accent)"/><text class="cmp-point-label" x="'+(x-12)+'" y="'+(i>0 && x-secondaryCoordinates[i-1][0]<90 && Math.abs(py-secondaryCoordinates[i-1][1])<24 ? Math.max(12,py-18) : Math.min(188,py+20))+'" text-anchor="end">'+fmt(secondaryPoints[i].value)+'</text>').join('')+'</g>' : '';
+  const trace = coordinates.length > 1
+    ? `<defs><linearGradient id="${fillId}" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="${Math.min(...coordinates.map(pair => pair[1]))}" y2="${bottom}">
+         <stop offset="0" stop-color="var(--accent)" stop-opacity=".34"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/>
+       </linearGradient></defs>
+       <polygon class="cmp-period-fill" fill="url(#${fillId})" points="${first[0]},${bottom} ${comparisonLine} ${last[0]},${bottom}"/>
+       <polyline class="cmp-period-trace" points="${comparisonLine}"/>`
+    : '';
   const marks = periods.map((series, i) => {
     const py = y(series.point.value);
     const x = series.x;
@@ -162,7 +124,7 @@ function periodGraph(metric, index, axis, width) {
     const labelY = close && i % 2
       ? (py < y(previous.point.value) ? Math.max(12, py - 32) : Math.min(175, py + 15))
       : py - 18;
-    return `<g class="${series.className}" style="color:${series.point.value < 0 ? 'var(--cmp-loss)' : 'var(--accent)'}"><circle cx="${x}" cy="${py}" r="3"/><text class="cmp-point-label ${series.point.value < 0 ? 'cmp-point-negative' : ''}" x="${labelX}" y="${labelY}" text-anchor="${alignLeft ? 'start' : 'end'}">${series.point.periodLabel ? series.point.date.slice(0,4) + ' · ' : ''}${fmt(series.point.value)}${metric.unit === '%' ? '%' : ''}</text></g>`;
+    return `<g class="${series.className}"><circle cx="${x}" cy="${py}" r="3"/><text class="cmp-point-label" x="${labelX}" y="${labelY}" text-anchor="${alignLeft ? 'start' : 'end'}">${fmt(series.point.value)}${metric.unit === '%' ? '%' : ''}</text></g>`;
   }).join('');
   const label = date => {
     const year = date.slice(0, 4);
@@ -184,7 +146,7 @@ function periodGraph(metric, index, axis, width) {
       <path class="cmp-start-baseline" d="M${left} ${baselineY}H${right}"/>`
     : '';
   const seriesLabel = series => series.point.label || 'Срез';
-  const legend = metric.secondaryPoints ? '<li>━ Предусмотрено по ШР</li><li>┄ Занятые ставки</li>' : startLegend + (ordered.length > 1
+  const legend = startLegend + (ordered.length > 1
     ? `<li class="cmp-series-a cmp-series-range"><i aria-hidden="true"></i>Период · ${label(ordered[0].point.date)} → ${label(ordered.at(-1).point.date)}</li>`
     : ordered.map(series => `<li class="${series.className}"><i aria-hidden="true"></i>${seriesLabel(series)} · ${label(series.point.date)}</li>`).join(''))
     + observations.filter(point => point.partial).map(point => `<li>${safe(point.periodLabel)} · ${fmt(point.value)}%</li>`).join('');
@@ -198,10 +160,11 @@ function periodGraph(metric, index, axis, width) {
   const rangeWidth = dateX(selectedEnd + halfDay) - rangeX;
   return `<svg class="cmp-period-graph" viewBox="0 0 ${width} 202" role="img" aria-label="${safe(metric.name + ', ' + metric.unit + '. ' + (accessible || 'НД в выбранном диапазоне'))}">
       <rect class="cmp-selected-range" x="${rangeX}" y="20" width="${rangeWidth}" height="156"/>
-      <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M${left} 20V176 M${left} ${zero}H${right}"/>
-      ${arrivalFill}${baseline}${trace}${coordinates.length < 2 || last[0] <= arrivalX ? arrivalArea : ''}${arrivalLine}
+      <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M${left} 20V176H${right}"/>
+      <path class="cmp-after-arrival" d="M${dateX(axis.arrival)} 176H${right}"/>
+      ${baseline}${trace}
       <path class="cmp-today-line" d="M${dateX(axis.today)} 20V176"/>
-      ${contextPoints}${marks}${partialTrace}${secondaryTrace}${tickLabels}
+      ${contextPoints}${marks}${tickLabels}
       ${periods.length ? '' : `<text class="cmp-axis-date" x="${rangeX + rangeWidth / 2}" y="94" text-anchor="middle">НД в выбранном диапазоне</text>`}
     </svg>${legend ? `<ul class="cmp-series-legend">${legend}</ul>` : ''}`;
 }
@@ -215,8 +178,8 @@ function comparisonTableData(metrics) {
   const rows = [
     ...metrics.map((metric, index) => ({
       ...metric,
-      direction: metric.direction || (metric.discrete ? null : index === 1 ? 'lower' : index === 0 || index >= 4 ? 'higher' : null),
-      comparableSnapshots: metric.comparableSnapshots || index <= 3 || metric.comparable,
+      direction: index === 1 ? 'lower' : index === 0 || index >= 4 ? 'higher' : null,
+      comparableSnapshots: index <= 3 || metric.comparable,
       icon: metric.icon || ['wallet', 'people', 'products', 'products', 'sales', 'trend'][index],
       shortName: index === 3 ? 'Прочие SKU' : metric.name
     })),
@@ -259,7 +222,7 @@ function renderComparison() {
   const datesValid = from && to && from <= to;
   const plotWidth = Math.max(240, $('#content').clientWidth - 30);
   const axis = chart && datesValid ? comparisonAxis(plotWidth, from, to) : null;
-  const visibleMetrics = chart ? metrics.filter(m=>!['Занято по ШР','Вакантно по ШР'].includes(m.name)).map(m=>m.name==='Предусмотрено по ШР' ? {...m,name:'Штатное расписание',secondaryPoints:metrics.find(r=>r.name==='Занято по ШР').points} : m) : comparisonTableData(metrics);
+  const visibleMetrics = chart ? metrics : comparisonTableData(metrics);
   const cards = visibleMetrics.map((metric, index) => `<section class="${chart ? 'panel cmp-card cmp-period-card' : 'cmp-pair'}" aria-label="${safe(metric.name)}">${chart ? `<h2>${metric.name}, <span>${metric.unit}</span></h2>` : ''}
     ${chart ? (axis ? periodGraph(metric, index, axis, plotWidth) : '<div class="cmp-period-empty">НД</div>') : comparisonTiles(metric)}</section>`).join('');
 
@@ -273,13 +236,19 @@ function renderComparison() {
   </div>`;
   const periodNote = !datesValid
     ? 'Укажите две даты. Дата «До» должна быть не раньше даты «От».'
-    : '';
-  const context = `${dates}${periodNote ? `<div class="cmp-context" role="status"><span>${periodNote}</span></div>` : ''}`;
+    : chart ? 'Голубая зона — выбранный диапазон. Точки — доступные срезы.' : 'НД — нет среза на выбранную дату.';
+  const context = `${dates}<div class="cmp-context" role="status"><span>${periodNote}</span></div>`;
   return '<section class="panel cmp-controls" aria-label="Настройки сравнения">' + switcher + context + '</section>'
-    + (chart ? `<h2 class="cmp-section-title">Динамика и сравнение показателей</h2>` : '')
+    + (chart ? `<h2 class="cmp-section-title">Динамика и сравнение показателей</h2>
+      <div class="cmp-time-key"><span>После прихода · 26.10.2026</span><span>Сегодня · ${comparisonToday().split('-').reverse().join('.')}</span></div>` : '')
     + (chart ? '' : '<div class="cmp-column-head"><span>База</span><span>Сейчас</span></div>')
     + '<div class="cmp-list">' + cards + '</div>'
-    ;
+    + `<details class="panel cmp-details"><summary>Источники и методика</summary>
+      <p>Выручка за январь–сентябрь и за полный год показана отдельно по ОФР. Текучесть 1С — увольнения за период / средняя численность × 100%; значение может превышать 100%. Январь–ноябрь 2026 отмечен отдельно на ноябре: точный день отчёта не указан. Срез SKU аттракционов — 02.11.2026. НД — нет данных.</p>
+      <p>Сделки считаются по дате подписания. Маржа — сумма маржи / сумма выручки без НДС. Плановая и фактическая маржа учитываются отдельно.</p></details>
+      <details class="panel cmp-details"><summary>Решения и результат</summary>
+      <p>Дата решения, ответственный, срок, показатель и подтверждённый эффект.</p>
+      <p>Дополнительные показатели: допуск SKU к производству, заказы в срок, операционный денежный поток, сумма подписанных заказов.</p></details>`;
 }
 
 renderers.comparison = renderComparison;
@@ -293,15 +262,6 @@ $('#content').addEventListener('change', event => {
   $(`#${id}`).focus();
 });
 $('#content').addEventListener('click', event => {
-  if(event.target.closest('[data-debt-dates]') && current==='comparison'){
-    comparisonDates.from='2024-12-31';comparisonDates.to='2026-09-30';render();
-    return;
-  }
-  if(event.target.closest('[data-staffing-dates]') && current==='comparison'){
-    const rows=window.AVERA_METRICS.staffing();
-    if(rows.length){comparisonDates.from=rows[0].date;comparisonDates.to=rows.at(-1).date;render();}
-    return;
-  }
   const button = event.target.closest('[data-comparison-view]');
   if (current !== 'comparison' || !button) return;
   const {comparisonView: view} = button.dataset;
@@ -314,14 +274,13 @@ window.applyActualLabels = function () {
   applyComparisonLabels();
   $('main').classList.toggle('cmp-page', current === 'comparison');
   if (current !== 'comparison') return;
-  $('.asof').replaceChildren();
+  $('.asof').innerHTML = '<strong>26.10.2026</strong><span>Дата прихода</span>';
 };
 let comparisonContentWidth = $('#content').clientWidth;
 new ResizeObserver(() => {
   const width = $('#content').clientWidth;
   if (width === comparisonContentWidth) return;
   comparisonContentWidth = width;
-  if (current === 'overview' || (current === 'comparison' && comparisonView === 'chart')) render();
+  if (current === 'comparison' && comparisonView === 'chart') render();
 }).observe($('#content'));
 render();
-
