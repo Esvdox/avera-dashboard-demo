@@ -23,10 +23,10 @@ function comparisonData() {
   }));
   const start = baseline.asOf.split('.').reverse().join('-');
   const staffing = metrics.staffing();
-  const shortLoans = metrics.balanceSeries('1510');
-  const loans = metrics.balanceSeries('1410').map((row, i) => {
-    const short = shortLoans[i]?.value;
-    return {...row, value: Number.isFinite(row.value) && Number.isFinite(short) ? (row.value + short) / 1000 : null};
+  const loans = metrics.loanSeries().map(r=>({...r,value:Number.isFinite(r.value)?r.value/1000:null}));
+  const profitSeries = (rows, year, suffix) => [2,3].map((column,index)=>{
+    const value=metrics.value(rows,'2400',column);
+    return {date:`${year+index}-${suffix}`,value:Number.isFinite(value)?value/1000:null};
   });
   const staffingMetrics = [
     ['Предусмотрено','planned'], ['Занято','occupied'], ['Вакантно','vacant']
@@ -42,6 +42,8 @@ function comparisonData() {
     {name: 'Сделки', unit: 'шт.', points: []},
     {name: 'Маржа сделок', unit: '%', points: []},
     {name: 'Выручка за год', unit: 'млн ₽', icon: 'wallet', comparable: true, points: annualRevenue},
+    {name: 'Чистая прибыль · 9 месяцев', unit: 'млн ₽', icon: 'trend', comparable: true, points: profitSeries(window.AVERA_ACCOUNTING.incomeNine,2025,'09-30')},
+    {name: 'Чистая прибыль за год', unit: 'млн ₽', icon: 'trend', comparable: true, points: profitSeries(window.AVERA_ACCOUNTING.incomeAnnual,2024,'12-31')},
     {name: 'Кредиторская задолженность', unit: 'млн ₽', icon: 'wallet', direction: 'lower', comparableSnapshots: true,
       points: metrics.balanceSeries('1520').map(r=>({...r,value:Number.isFinite(r.value)?r.value/1000:null}))},
     {name: 'Остаток займов по балансу', unit: 'млн ₽', icon: 'wallet', comparableSnapshots: true, discrete: true, points: loans},

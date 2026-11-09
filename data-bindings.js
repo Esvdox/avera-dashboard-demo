@@ -1,6 +1,10 @@
 'use strict';
 // Derived values only. Source snapshots remain unchanged and retain their totals.
 window.AVERA_METRICS={
+ loanSeries(){
+  const short=new Map(this.balanceSeries('1510').map(r=>[r.date,r.value]));
+  return this.balanceSeries('1410').map(r=>({...r,value:Number.isFinite(r.value)&&Number.isFinite(short.get(r.date))?r.value+short.get(r.date):null}));
+ },
  balanceSeries(code){
   const dates=['2024-12-31','2025-12-31','2026-09-30'];
   return dates.map((date,index)=>({date,value:this.value(window.AVERA_ACCOUNTING?.balance,code,index+2),

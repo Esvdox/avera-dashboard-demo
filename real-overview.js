@@ -67,7 +67,7 @@ function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
   const area = curve + ' V' + zero + ' H' + first.x + ' Z';
   const ticks = Array.from({length: Math.round((high - low) / tickStep) + 1}, (_, i) => (low + i * tickStep));
   const clip = side => 'av-kpi-' + id + '-' + side;
-  const traces = marks.length < 2 || id === 'staffing' ? '' : ['up', 'down'].map((side, i) => {
+  const traces = marks.length < 2 || ['staffing','loans'].includes(id) ? '' : ['up', 'down'].map((side, i) => {
     const key = clip(side);
     const shade = color(i ? -1 : 1);
     const edge = i ? 176 : 28;
@@ -107,6 +107,8 @@ window.ownerOverview = function () {
   const nineMonths = code => points(['2025-09-30','2026-09-30'],['9 мес. 2025','9 мес. 2026'],finance.incomeNine,code);
   const revenue = nineMonths('2110');
   const profit = nineMonths('2400');
+  const annualRevenue = points(['2024-12-31','2025-12-31'],['2024 (сравн.)','2025'],finance.incomeAnnual,'2110');
+  const loans = window.AVERA_METRICS.loanSeries().filter(r=>inRange(r.date)&&Number.isFinite(r.value)).map(r=>[r.date.split('-').reverse().join('.'),r.value,r.date]);
   const annualProfit = points(['2024-12-31','2025-12-31'],['2024 (сравн.)','2025'],finance.incomeAnnual,'2400');
   const debt = window.AVERA_METRICS.balanceSeries('1520').filter(r=>inRange(r.date)&&Number.isFinite(r.value)).map(r=>[r.date.split('-').reverse().join('.')+(r.date==='2024-12-31'?'²':''),r.value,r.date]);
   const changeLabel = (series, direction, format, unit, context = '') => {
@@ -126,7 +128,11 @@ window.ownerOverview = function () {
       '</label><input type="date" id="av-overview-'+key+'" data-overview-date="'+key+'" value="'+safe(overviewRange[key])+'"></div>').join('') +
     '</div>' + (from && to && from<=to ? '' : '<p class="av-muted">Укажите корректный диапазон дат.</p>') + '</div>';
   return controls + '<section class="av-grid av-owner-kpis" aria-label="Показатели компании">' + [
-    financeCard('wallet','Выручка',revenue,financialChart('revenue',revenue),1),
+    financeCard('wallet','Выручка',revenue.length ? revenue : annualRevenue,
+      (revenue.length ? financialChart('revenue',revenue) : '') +
+      (annualRevenue.length ? '<p class="av-muted">Годовой ОФР · млн ₽</p>' + financialChart('annual-revenue',annualRevenue) : '') +
+      (!revenue.length && !annualRevenue.length ? missing : ''),1),
+    financeCard('wallet','Остаток займов по балансу',loans,financialChart('loans',loans),0,'',false),
     financeCard('trend','Чистая прибыль',profit.length ? profit : annualProfit,
       (profit.length ? financialChart('profit',profit) : '') +
       (annualProfit.length ? '<p class="av-muted">Годовой ОФР · млн ₽</p>' + financialChart('annual-profit',annualProfit) : '') +
