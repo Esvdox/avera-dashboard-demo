@@ -38,7 +38,6 @@ function comparisonData() {
     {name: 'Маржа сделок', unit: '%', points: []},
     {name: 'Выручка за год', unit: 'млн ₽', icon: 'wallet', comparable: true, points: annualRevenue},
     {name: 'Кредиторская задолженность', unit: 'млн ₽', icon: 'wallet', direction: 'lower', comparableSnapshots: true,
-      note: '2024 — сравнительная колонка поздней отчётности; исходная версия отличается. Остатки на отчётные даты, не обороты.',
       points: metrics.balanceSeries('1520').map(r=>({...r,value:Number.isFinite(r.value)?r.value/1000:null}))},
     ...staffingMetrics
   ];
@@ -162,7 +161,7 @@ function periodGraph(metric, index, axis, width) {
       <path class="cmp-start-baseline" d="M${left} ${baselineY}H${right}"/>`
     : '';
   const seriesLabel = series => series.point.label || 'Срез';
-  const legend = (metric.discrete ? '<li>Только подтверждённые срезы; между датами НД. Ставки не равны людям.</li>' : '') + startLegend + (ordered.length > 1
+  const legend = startLegend + (ordered.length > 1
     ? `<li class="cmp-series-a cmp-series-range"><i aria-hidden="true"></i>Период · ${label(ordered[0].point.date)} → ${label(ordered.at(-1).point.date)}</li>`
     : ordered.map(series => `<li class="${series.className}"><i aria-hidden="true"></i>${seriesLabel(series)} · ${label(series.point.date)}</li>`).join(''))
     + observations.filter(point => point.partial).map(point => `<li>${safe(point.periodLabel)} · ${fmt(point.value)}%</li>`).join('');
@@ -239,7 +238,7 @@ function renderComparison() {
   const axis = chart && datesValid ? comparisonAxis(plotWidth, from, to) : null;
   const visibleMetrics = chart ? metrics : comparisonTableData(metrics);
   const cards = visibleMetrics.map((metric, index) => `<section class="${chart ? 'panel cmp-card cmp-period-card' : 'cmp-pair'}" aria-label="${safe(metric.name)}">${chart ? `<h2>${metric.name}, <span>${metric.unit}</span></h2>` : ''}
-    ${chart ? (axis ? periodGraph(metric, index, axis, plotWidth) : '<div class="cmp-period-empty">НД</div>') : comparisonTiles(metric)}${metric.note?'<p class="hint">'+safe(metric.note)+'</p>':''}</section>`).join('');
+    ${chart ? (axis ? periodGraph(metric, index, axis, plotWidth) : '<div class="cmp-period-empty">НД</div>') : comparisonTiles(metric)}</section>`).join('');
 
   const dateField = (key, label) => `<div class="cmp-date-field">
       <label for="cmp-snapshot-${key}">${label}</label>
@@ -251,14 +250,13 @@ function renderComparison() {
   </div>`;
   const periodNote = !datesValid
     ? 'Укажите две даты. Дата «До» должна быть не раньше даты «От».'
-    : chart ? 'Голубая зона — выбранный диапазон. Точки — доступные срезы.' : 'НД — нет среза на выбранную дату.';
+    : chart ? '' : 'НД — нет среза на выбранную дату.';
   const staffingDates=window.AVERA_METRICS.staffing();
   const staffingShortcut=staffingDates.length ? '<button type="button" class="secondary" data-staffing-dates>Срезы штатных ставок: '+staffingDates[0].date.split('-').reverse().join('.')+' → '+staffingDates.at(-1).date.split('-').reverse().join('.')+'</button>' : '';
   const debtShortcut='<button type="button" class="secondary" data-debt-dates>Баланс: 31.12.2024 → 30.09.2026</button>';
-  const context = `${dates}${staffingShortcut}${debtShortcut}<div class="cmp-context" role="status"><span>${periodNote}</span></div>`;
+  const context = `${dates}${staffingShortcut}${debtShortcut}${periodNote ? `<div class="cmp-context" role="status"><span>${periodNote}</span></div>` : ''}`;
   return '<section class="panel cmp-controls" aria-label="Настройки сравнения">' + switcher + context + '</section>'
-    + (chart ? `<h2 class="cmp-section-title">Динамика и сравнение показателей</h2>
-      <div class="cmp-time-key"><span>После прихода · 26.10.2026</span><span>Сегодня · ${comparisonToday().split('-').reverse().join('.')}</span></div>` : '')
+    + (chart ? `<h2 class="cmp-section-title">Динамика и сравнение показателей</h2>` : '')
     + (chart ? '' : '<div class="cmp-column-head"><span>База</span><span>Сейчас</span></div>')
     + '<div class="cmp-list">' + cards + '</div>'
     + `<details class="panel cmp-details"><summary>Источники и методика</summary>
@@ -301,7 +299,7 @@ window.applyActualLabels = function () {
   applyComparisonLabels();
   $('main').classList.toggle('cmp-page', current === 'comparison');
   if (current !== 'comparison') return;
-  $('.asof').innerHTML = '<strong>26.10.2026</strong><span>Дата прихода</span>';
+  $('.asof').replaceChildren();
 };
 let comparisonContentWidth = $('#content').clientWidth;
 new ResizeObserver(() => {
