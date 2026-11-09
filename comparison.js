@@ -114,12 +114,17 @@ function periodGraph(metric, index, axis, width) {
        <polygon class="cmp-period-fill" fill="url(#${fillId})" points="${first[0]},${bottom} ${comparisonLine} ${last[0]},${bottom}"/>
        <polyline class="cmp-period-trace" points="${comparisonLine}"/>`
     : '';
-  const marks = periods.map(series => {
+  const marks = periods.map((series, i) => {
     const py = y(series.point.value);
     const x = series.x;
     const alignLeft = x < (left + right) / 2;
     const labelX = x + (alignLeft ? 7 : -7);
-    return `<g class="${series.className}"><circle cx="${x}" cy="${py}" r="3"/><text class="cmp-point-label" x="${labelX}" y="${py - 9}" text-anchor="${alignLeft ? 'start' : 'end'}">${fmt(series.point.value)}${metric.unit === '%' ? '%' : ''}</text></g>`;
+    const previous = periods[i - 1];
+    const close = previous && x - previous.x < 65 && Math.abs(py - y(previous.point.value)) < 24;
+    const labelY = close && i % 2
+      ? (py < y(previous.point.value) ? Math.max(12, py - 23) : Math.min(175, py + 15))
+      : py - 9;
+    return `<g class="${series.className}"><circle cx="${x}" cy="${py}" r="3"/><text class="cmp-point-label" x="${labelX}" y="${labelY}" text-anchor="${alignLeft ? 'start' : 'end'}">${fmt(series.point.value)}${metric.unit === '%' ? '%' : ''}</text></g>`;
   }).join('');
   const label = date => {
     const year = date.slice(0, 4);

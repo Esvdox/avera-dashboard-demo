@@ -123,7 +123,9 @@ body#avera-owner{margin:0;font:var(--text-base)/1.45 var(--font-ui);background:v
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 
 #avera-owner .av-owner-kpis{grid-template-columns:minmax(0,1fr)}
+#avera-owner .av-owner-kpis .av-metric{display:flex;grid-row:auto}
 #avera-owner .av-kpi-chart{border-top:1px solid var(--line);margin-top:12px;padding-top:10px}
+#avera-owner .av-owner-kpis .av-metric>.av-muted{flex-shrink:0;min-height:1.4em;margin:0 0 10px}
 #avera-owner .av-kpi-chart p{margin:0;font-size:12px}
 #avera-owner .av-kpi-bars{list-style:none;padding:0;margin:0;display:grid;gap:8px}
 #avera-owner .av-kpi-bars li{display:grid;grid-template-columns:90px minmax(0,1fr) 70px;align-items:center;gap:8px;font-size:12px}
