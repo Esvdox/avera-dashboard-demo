@@ -41,6 +41,11 @@ function comparisonData() {
 }
 
 const comparisonDay = 86400000;
+const arrivalDate = '2026-10-26';
+
+function comparisonToday() {
+  return new Intl.DateTimeFormat('sv-SE', {timeZone: 'Europe/Moscow'}).format(new Date());
+}
 
 function comparisonAxis(width, from, to) {
   const selectedStart = Date.parse(from);
@@ -49,8 +54,11 @@ function comparisonAxis(width, from, to) {
   const paddingRatio = duration <= 90 * comparisonDay ? .25 : .08;
   const padding = Math.max(duration > 90 * comparisonDay ? 32 * comparisonDay : comparisonDay,
     Math.round(duration / comparisonDay * paddingRatio) * comparisonDay);
-  const start = selectedStart - padding;
-  const end = selectedEnd + padding;
+  const arrival = Date.parse(arrivalDate);
+  const today = Date.parse(comparisonToday());
+  const markerMargin = Math.max(comparisonDay, Math.round(duration * .02 / comparisonDay) * comparisonDay);
+  const start = Math.min(selectedStart - padding, arrival - markerMargin, today - markerMargin);
+  const end = Math.max(selectedEnd + padding, arrival + markerMargin, today + markerMargin);
   const left = 56;
   const right = width - 26;
   const x = date => left + (date - start) / (end - start) * (right - left);
@@ -71,7 +79,7 @@ function comparisonAxis(width, from, to) {
     else if (unit === 'month') cursor.setUTCMonth(cursor.getUTCMonth() + step);
     else cursor.setUTCFullYear(cursor.getUTCFullYear() + step);
   }
-  return {left, right, x, start, end, selectedStart, selectedEnd, ticks};
+  return {left, right, x, start, end, selectedStart, selectedEnd, ticks, arrival, today};
 }
 
 function periodGraph(metric, index, axis, width) {
@@ -141,7 +149,10 @@ function periodGraph(metric, index, axis, width) {
   return `<svg class="cmp-period-graph" viewBox="0 0 ${width} 202" role="img" aria-label="${safe(metric.name + ', ' + metric.unit + '. ' + (accessible || 'НД в выбранном диапазоне'))}">
       <rect class="cmp-selected-range" x="${rangeX}" y="20" width="${rangeWidth}" height="156"/>
       <g class="cmp-plot-grid">${grid}</g><path class="cmp-plot-axis" d="M${left} 20V176H${right}"/>
-      ${baseline}${trace}${contextPoints}${marks}${tickLabels}
+      <path class="cmp-after-arrival" d="M${dateX(axis.arrival)} 176H${right}"/>
+      ${baseline}${trace}
+      <path class="cmp-today-line" d="M${dateX(axis.today)} 20V176"/>
+      ${contextPoints}${marks}${tickLabels}
       ${periods.length ? '' : `<text class="cmp-axis-date" x="${rangeX + rangeWidth / 2}" y="94" text-anchor="middle">НД в выбранном диапазоне</text>`}
     </svg>${legend ? `<ul class="cmp-series-legend">${legend}</ul>` : ''}`;
 }
@@ -216,7 +227,8 @@ function renderComparison() {
     : chart ? 'Голубая зона — выбранный диапазон. Точки — доступные срезы.' : 'НД — нет среза на выбранную дату.';
   const context = `${dates}<div class="cmp-context" role="status"><span>${periodNote}</span></div>`;
   return '<section class="panel cmp-controls" aria-label="Настройки сравнения">' + switcher + context + '</section>'
-    + (chart ? '<h2 class="cmp-section-title">Динамика и сравнение показателей</h2>' : '')
+    + (chart ? `<h2 class="cmp-section-title">Динамика и сравнение показателей</h2>
+      <div class="cmp-time-key"><span>После прихода · 26.10.2026</span><span>Сегодня · ${comparisonToday().split('-').reverse().join('.')}</span></div>` : '')
     + (chart ? '' : '<div class="cmp-column-head"><span>База</span><span>Сейчас</span></div>')
     + '<div class="cmp-list">' + cards + '</div>'
     + `<details class="panel cmp-details"><summary>Источники и методика</summary>
@@ -250,7 +262,7 @@ window.applyActualLabels = function () {
   applyComparisonLabels();
   $('main').classList.toggle('cmp-page', current === 'comparison');
   if (current !== 'comparison') return;
-  $('.asof').innerHTML = '<strong>01.11.2026</strong><span>Дата прихода</span>';
+  $('.asof').innerHTML = '<strong>26.10.2026</strong><span>Дата прихода</span>';
 };
 let comparisonContentWidth = $('#content').clientWidth;
 new ResizeObserver(() => {
