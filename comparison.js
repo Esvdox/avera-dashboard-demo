@@ -111,7 +111,7 @@ function periodGraph(metric, index, axis, width) {
   const arrivalX = dateX(axis.arrival);
   const crossing = coordinates.findIndex(([x], i) => i > 0 && coordinates[i-1][0] <= arrivalX && x >= arrivalX);
   let arrivalY = Number.isFinite(metric.startBaseline) ? y(metric.startBaseline) : null;
-  if (crossing > 0 && !metric.discrete) {
+  if (crossing > 0) {
     const [x0,y0] = coordinates[crossing-1];
     const [x1,y1] = coordinates[crossing];
     const t = (arrivalX-x0)/(x1-x0);
@@ -122,7 +122,7 @@ function periodGraph(metric, index, axis, width) {
   const arrivalFill = '<defs><linearGradient id="' + arrivalFillId + '">' +
     '<stop stop-color="var(--cmp-arrival-color)" stop-opacity=".38"/><stop offset="1" stop-color="var(--cmp-arrival-color)" stop-opacity=".10"/>' +
     '</linearGradient><clipPath id="' + arrivalClipId + '"><rect x="' + arrivalX + '" y="20" width="' + (right-arrivalX) + '" height="156"/></clipPath></defs>';
-  const arrivalArea = !metric.discrete && coordinates.length > 1 && last[0] > arrivalX
+  const arrivalArea = coordinates.length > 1 && last[0] > arrivalX
     ? '<path d="' + area + '" fill="url(#' + arrivalFillId + ')" clip-path="url(#' + arrivalClipId + ')"/>'
     : Number.isFinite(metric.startBaseline)
       ? '<rect x="' + arrivalX + '" y="' + arrivalY + '" width="' + (right-arrivalX) + '" height="' + (bottom-arrivalY) + '" fill="url(#' + arrivalFillId + ')"/>'
@@ -130,7 +130,7 @@ function periodGraph(metric, index, axis, width) {
   const arrivalLine = '<path class="cmp-after-arrival' + (arrivalY === null ? ' cmp-arrival-context' : '') +
     '" d="M' + arrivalX + ' ' + bottom + 'V' + (arrivalY ?? 20) + '"><title>Приход · 26.10.2026</title></path>';
   const fillId = `cmp-period-fill-${index}`;
-  const trace = !metric.discrete && coordinates.length > 1
+  const trace = coordinates.length > 1
     ? `<defs><linearGradient id="${fillId}" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="${Math.min(...coordinates.map(pair => pair[1]))}" y2="${bottom}">
          <stop offset="0" stop-color="var(--accent)" stop-opacity=".34"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/>
        </linearGradient></defs>

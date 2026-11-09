@@ -67,7 +67,7 @@ function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
   const area = curve + ' V' + zero + ' H' + first.x + ' Z';
   const ticks = Array.from({length: Math.round((high - low) / tickStep) + 1}, (_, i) => (low + i * tickStep));
   const clip = side => 'av-kpi-' + id + '-' + side;
-  const traces = marks.length < 2 || ['staffing','loans'].includes(id) ? '' : ['up', 'down'].map((side, i) => {
+  const traces = marks.length < 2 ? '' : ['up', 'down'].map((side, i) => {
     const key = clip(side);
     const shade = color(i ? -1 : 1);
     const edge = i ? 176 : 28;
