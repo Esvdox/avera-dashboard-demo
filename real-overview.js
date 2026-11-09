@@ -38,8 +38,10 @@ window.avTimeTicks = function (start, end, count) {
 function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
   if (!points.length) return missing;
   const start = Date.parse(overviewRange.from), end = Date.parse(overviewRange.to);
-  const x = day => end === start ? 224 : 88 + 268 * (day - start) / (end - start);
-  const ticksX = window.avTimeTicks(start,end,Math.max(2,Math.floor(Math.min(740,$('#content').clientWidth-32)/85)));
+  const width = Math.max(240, $('#content').clientWidth - 34);
+  const left = 56, right = width - 26;
+  const x = day => end === start ? (left + right) / 2 : left + 28 + (right - left - 56) * (day - start) / (end - start);
+  const ticksX = window.avTimeTicks(start,end,Math.max(2,Math.floor((right-left)/85)));
   const values = points.map(([, value]) => value);
   const minimum = Math.min(0, ...values);
   const maximum = Math.max(ceiling, 0, ...values);
@@ -48,7 +50,7 @@ function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
   const tickStep = Math.ceil(span / (4 * step)) * step;
   const low = Math.floor(minimum / tickStep) * tickStep;
   const high = Math.max(tickStep, Math.ceil(maximum / tickStep) * tickStep);
-  const y = value => 36 + (high - value) / (high - low) * 118;
+  const y = value => 28 + (high - value) / (high - low) * 148;
   const zero = y(0);
   const color = value => value < 0 ? 'var(--av-profit-loss)' : 'var(--accent)';
   const marks = points.map(([label, value, day]) => ({
@@ -65,20 +67,26 @@ function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
   const area = curve + ' V' + zero + ' H' + first.x + ' Z';
   const ticks = Array.from({length: Math.round((high - low) / tickStep) + 1}, (_, i) => (low + i * tickStep));
   const clip = side => 'av-kpi-' + id + '-' + side;
-  const traces = marks.length < 2 ? '' :
-    '<defs><clipPath id="' + clip('up') + '"><rect width="420" height="' + zero + '"/></clipPath>' +
-    '<clipPath id="' + clip('down') + '"><rect y="' + zero + '" width="420" height="' + (190 - zero) + '"/></clipPath></defs>' +
-    ['up', 'down'].map((side, i) => '<g clip-path="url(#' + clip(side) + ')" color="' + color(i ? -1 : 1) +
-      '"><path d="' + area + '" fill="currentColor" opacity=".25"/><path d="' + curve + '" fill="none" stroke="currentColor" stroke-width="2.5"/></g>').join('');
-  return '<svg class="av-profit-chart" viewBox="0 0 420 198" role="img" aria-label="' +
+  const traces = marks.length < 2 ? '' : ['up', 'down'].map((side, i) => {
+    const key = clip(side);
+    const shade = color(i ? -1 : 1);
+    const edge = i ? 176 : 28;
+    return '<defs><clipPath id="' + key + '"><rect y="' + (i ? zero : 0) + '" width="' + width +
+      '" height="' + (i ? 202 - zero : zero) + '"/></clipPath><linearGradient id="' + key +
+      '-fill" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="' + edge + '" y2="' + zero +
+      '"><stop stop-color="' + shade + '" stop-opacity=".52"/><stop offset="1" stop-color="' + shade +
+      '" stop-opacity="0"/></linearGradient></defs><g clip-path="url(#' + key + ')"><path d="' +
+      area + '" fill="url(#' + key + '-fill)"/><path d="' + curve + '" fill="none" stroke="' + shade + '" stroke-width="2"/></g>';
+  }).join('');
+  return '<svg class="av-profit-chart" viewBox="0 0 ' + width + ' 202" role="img" aria-label="' +
     safe(unit + '. ' + marks.map(mark => mark.label + ': ' + format(mark.value)).join('. ')) + '">' +
-    ticks.map(value => '<path d="M65 ' + y(value) + 'H392" class="av-kpi-gridline"/><text class="' + (Math.abs(Math.round(value/tickStep))%2 ? 'av-kpi-minor-tick' : '') + '" x="53" y="' +
+    ticks.map(value => '<path d="M' + left + ' ' + y(value) + 'H' + right + '" class="av-kpi-gridline"/><text class="' + (Math.abs(Math.round(value/tickStep))%2 ? 'av-kpi-minor-tick' : '') + '" x="42" y="' +
       (y(value) + 4) + '" text-anchor="end">' + safe(fmt(value)) + '</text>').join('') + traces +
-    '<path d="M65 36V154 M65 ' + zero + 'H392" class="av-profit-axis"/>' +
-    marks.map((mark, i) => '<circle cx="' + mark.x + '" cy="' + mark.y + '" r="3.5" fill="' + color(mark.value) +
+    '<path d="M' + left + ' 28V176 M' + left + ' ' + zero + 'H' + right + '" class="av-profit-axis"/>' +
+    marks.map((mark, i) => '<circle cx="' + mark.x + '" cy="' + mark.y + '" r="3" stroke="' + color(mark.value) + '" fill="' + (i===0 && marks.length>1 ? 'var(--surface)' : color(mark.value)) +
       '"/><text x="' + mark.x + '" y="' + (i % 2 && mark.x - marks[i-1].x < 90 ? mark.y + 22 : mark.y - 16) + '" fill="' + color(mark.value) + '" text-anchor="middle">' +
       safe(format(mark.value)) + '</text>').join('') +
-    ticksX.map(tick=>'<text x="'+x(tick.date)+'" y="184" text-anchor="middle">'+safe(tick.label)+'</text>').join('') +
+    ticksX.map(tick=>'<text x="'+x(tick.date)+'" y="194" text-anchor="middle">'+safe(tick.label)+'</text>').join('') +
     '</svg>';
 }
 
