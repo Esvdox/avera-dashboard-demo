@@ -13,8 +13,35 @@ function card(icon, label, value, note, route, chart, change = '') {
 const overviewRange = {from: '2025-09-30', to: new Intl.DateTimeFormat('sv-SE', {timeZone:'Europe/Moscow'}).format(new Date())};
 const missing = '<p class="av-muted">Нет данных за выбранный период</p>';
 
+function overviewTimeTicks(start, end, count) {
+  const day = 86400000;
+  const days = (end - start) / day;
+  const unit = days <= 21 ? 'day' : days <= 140 ? 'week' : days <= 730 ? 'month' : 'year';
+  const step = Math.max(1, Math.ceil(days / (count * {day:1, week:7, month:31, year:366}[unit])));
+  const cursor = new Date(start);
+  if (unit === 'week') cursor.setUTCDate(cursor.getUTCDate() - (cursor.getUTCDay() + 6) % 7);
+  if (unit === 'month' || unit === 'year') cursor.setUTCDate(1);
+  if (unit === 'year') cursor.setUTCMonth(0);
+  const format = new Intl.DateTimeFormat('ru-RU', {timeZone:'UTC',
+    ...(unit === 'year' ? {year:'numeric'} : unit === 'month' ? {month:'short',year:'2-digit'} : {day:'2-digit',month:unit==='week'?'short':'2-digit'})
+  });
+  const ticks = [];
+  while (+cursor <= end) {
+    if (+cursor >= start) ticks.push({date:+cursor,label:format.format(cursor)});
+    if (unit === 'month') cursor.setUTCMonth(cursor.getUTCMonth()+step);
+    else if (unit === 'year') cursor.setUTCFullYear(cursor.getUTCFullYear()+step);
+    else cursor.setUTCDate(cursor.getUTCDate()+step*(unit==='week'?7:1));
+  }
+  return ticks;
+}
+
 function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
   if (!points.length) return missing;
+  const start = Date.parse(overviewRange.from), end = Date.parse(overviewRange.to);
+  const width = $('#content').clientWidth - 34;
+  const left = 56, right = width - 26;
+  const x = day => end === start ? (left + right) / 2 : left + 28 + (right - left - 56) * (day - start) / (end - start);
+  const ticksX = overviewTimeTicks(start,end,Math.max(2,Math.floor((right-left)/85)));
   const values = points.map(([, value]) => value);
   const minimum = Math.min(0, ...values);
   const maximum = Math.max(ceiling, 0, ...values);
@@ -23,13 +50,19 @@ function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
   const tickStep = Math.ceil(span / (4 * step)) * step;
   const low = Math.floor(minimum / tickStep) * tickStep;
   const high = Math.max(tickStep, Math.ceil(maximum / tickStep) * tickStep);
-  const y = value => 36 + (high - value) / (high - low) * 118;
+  const y = value => 28 + (high - value) / (high - low) * 148;
   const zero = y(0);
   const color = value => value < 0 ? 'var(--av-profit-loss)' : 'var(--accent)';
-  const marks = points.map(([label, value], i) => ({
-    label, value, x: points.length === 1 ? 224 : 111 + i * 235 / (points.length - 1), y: y(value)
+  const marks = points.map(([label, value, day]) => ({
+    label, value, x: x(Date.parse(day)), y: y(value)
   }));
   const first = marks[0];
+  marks.forEach((mark, i) => {
+    const previous = marks[i - 1];
+    const above = mark.y - 16;
+    mark.labelY = previous && mark.x - previous.x < 85 && Math.abs(above - previous.labelY) < 15
+      ? Math.min(175, mark.y + 22) : above;
+  });
   const last = marks.at(-1);
   let curve = 'M' + first.x + ' ' + first.y;
   marks.slice(1).forEach((mark, i) => {
@@ -40,19 +73,26 @@ function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
   const area = curve + ' V' + zero + ' H' + first.x + ' Z';
   const ticks = Array.from({length: Math.round((high - low) / tickStep) + 1}, (_, i) => (low + i * tickStep));
   const clip = side => 'av-kpi-' + id + '-' + side;
-  const traces = marks.length < 2 ? '' :
-    '<defs><clipPath id="' + clip('up') + '"><rect width="420" height="' + zero + '"/></clipPath>' +
-    '<clipPath id="' + clip('down') + '"><rect y="' + zero + '" width="420" height="' + (190 - zero) + '"/></clipPath></defs>' +
-    ['up', 'down'].map((side, i) => '<g clip-path="url(#' + clip(side) + ')" color="' + color(i ? -1 : 1) +
-      '"><path d="' + area + '" fill="currentColor" opacity=".25"/><path d="' + curve + '" fill="none" stroke="currentColor" stroke-width="2.5"/></g>').join('');
-  return '<svg class="av-profit-chart" viewBox="0 0 420 198" role="img" aria-label="' +
+  const traces = marks.length < 2 ? '' : ['up', 'down'].map((side, i) => {
+    const key = clip(side);
+    const shade = color(i ? -1 : 1);
+    const edge = i ? 176 : 28;
+    return '<defs><clipPath id="' + key + '"><rect y="' + (i ? zero : 0) + '" width="' + width +
+      '" height="' + (i ? 202 - zero : zero) + '"/></clipPath><linearGradient id="' + key +
+      '-fill" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="' + edge + '" y2="' + zero +
+      '"><stop stop-color="' + shade + '" stop-opacity=".52"/><stop offset="1" stop-color="' + shade +
+      '" stop-opacity="0"/></linearGradient></defs><g clip-path="url(#' + key + ')"><path d="' +
+      area + '" fill="url(#' + key + '-fill)"/><path d="' + curve + '" fill="none" stroke="' + shade + '" stroke-width="1.5" vector-effect="non-scaling-stroke"/></g>';
+  }).join('');
+  return '<svg class="av-profit-chart" viewBox="0 0 ' + width + ' 202" role="img" aria-label="' +
     safe(unit + '. ' + marks.map(mark => mark.label + ': ' + format(mark.value)).join('. ')) + '">' +
-    ticks.map(value => '<path d="M65 ' + y(value) + 'H392" class="av-kpi-gridline"/><text class="' + (Math.abs(Math.round(value/tickStep))%2 ? 'av-kpi-minor-tick' : '') + '" x="53" y="' +
+    ticks.map(value => '<path d="M' + left + ' ' + y(value) + 'H' + right + '" class="av-kpi-gridline"/><text class="' + (Math.abs(Math.round(value/tickStep))%2 ? 'av-kpi-minor-tick' : '') + '" x="42" y="' +
       (y(value) + 4) + '" text-anchor="end">' + safe(fmt(value)) + '</text>').join('') + traces +
-    '<path d="M65 36V154 M65 ' + zero + 'H392" class="av-profit-axis"/>' +
-    marks.map(mark => '<circle cx="' + mark.x + '" cy="' + mark.y + '" r="3.5" fill="' + color(mark.value) +
-      '"/><text x="' + mark.x + '" y="' + (mark.y - 16) + '" fill="' + color(mark.value) + '" text-anchor="middle">' +
-      safe(format(mark.value)) + '</text><text x="' + mark.x + '" y="184" text-anchor="middle">' + safe(mark.label) + '</text>').join('') +
+    '<path d="M' + left + ' 28V176 M' + left + ' ' + zero + 'H' + right + '" class="av-profit-axis"/>' +
+    marks.map((mark, i) => '<circle cx="' + mark.x + '" cy="' + mark.y + '" r="3" stroke="' + color(mark.value) + '" fill="' + (i===0 && marks.length>1 ? 'var(--surface)' : color(mark.value)) +
+      '"/><text x="' + mark.x + '" y="' + mark.labelY + '" fill="' + color(mark.value) + '" text-anchor="middle">' +
+      safe(format(mark.value)) + '</text>').join('') +
+    ticksX.map(tick=>'<text x="'+x(tick.date)+'" y="194" text-anchor="middle">'+safe(tick.label)+'</text>').join('') +
     '</svg>';
 }
 
@@ -61,13 +101,13 @@ window.ownerOverview = function () {
   const inRange = day => Boolean(from && to && day && day >= from && day <= to);
   const staffingHistory = (window.AVERA_STAFFING_HISTORY || []).filter(row=>inRange(row.date));
   const staffing = staffingHistory.at(-1);
-  const kdDate = window.AVERA_KD.asOf;
-  const products = inRange(date(kdDate)) ? window.AVERA_METRICS.products() : null;
+  const kdDate = window.AVERA_KD?.asOf;
+  const products = inRange(date(kdDate)) && window.AVERA_METRICS.products ? window.AVERA_METRICS.products() : null;
   const finance = window.AVERA_ACCOUNTING;
   const read = window.AVERA_METRICS.value;
   const points = (dates, labels, rows, code) => dates.flatMap((day,i)=>{
     const value = read(rows,code,i+2);
-    return inRange(day) && Number.isFinite(value) ? [[labels[i],value]] : [];
+    return inRange(day) && Number.isFinite(value) ? [[labels[i],value,day]] : [];
   });
   const nineMonths = code => points(['2025-09-30','2026-09-30'],['9 мес. 2025','9 мес. 2026'],finance.incomeNine,code);
   const revenue = nineMonths('2110');
@@ -83,8 +123,8 @@ window.ownerOverview = function () {
   const financeCard = (icon,label,series,chart,direction,context) => card(icon,label,series.length ? money(series.at(-1)[1])+' млн ₽':'НД',
     series.length ? series.map(([period])=>period).join(' → ')+' · млн ₽' : 'Нет среза в выбранном периоде','finance',chart,
     changeLabel(series,direction,money,'млн ₽',context));
-  const staffingSeries = staffingHistory.map(row=>[row.date.split('-').reverse().join('.'),row.planned-row.vacant]);
-  const financialChart = (id, series) => overviewChart(id, series.map(([label, value]) => [label, value / 1000]), 'млн ₽', value => money(value * 1000));
+  const staffingSeries = staffingHistory.map(row=>[row.date.split('-').reverse().join('.'),row.planned-row.vacant,row.date]);
+  const financialChart = (id, series) => overviewChart(id, series.map(([label, value, day]) => [label, value / 1000, day]), 'млн ₽', value => money(value * 1000));
   const controls = '<div class="panel cmp-controls" aria-label="Единый период обзора"><div class="cmp-dates">' +
     [['from','От'],['to','До']].map(([key,label])=>'<div class="cmp-date-field"><label for="av-overview-'+key+'">'+label+
       '</label><input type="date" id="av-overview-'+key+'" data-overview-date="'+key+'" value="'+safe(overviewRange[key])+'"></div>').join('') +
@@ -99,7 +139,7 @@ window.ownerOverview = function () {
       overviewChart('staffing',staffingSeries,'Занятые ставки',fmt,Math.max(0,...staffingHistory.map(row=>row.planned))),changeLabel(staffingSeries,0,fmt,'занятых ставок')),
     card('products','Готовность КД',products?products.complete+' из '+products.count+' SKU':'НД',
       products?'КД на 100% · '+kdDate:'Нет среза в выбранном периоде','products',
-      products && products.count ? overviewChart('kd',[[kdDate,products.complete/products.count*100]],'Доля SKU с КД на 100%', value => fmt(value)+'%',100) : missing)
+      products && products.count ? overviewChart('kd',[[kdDate,products.complete/products.count*100,date(kdDate)]],'Доля SKU с КД на 100%', value => fmt(value)+'%',100) : missing)
   ].join('') + '</section>';
 };
 $('#content').addEventListener('change', event=>{
@@ -109,6 +149,13 @@ $('#content').addEventListener('change', event=>{
   render();
   $('#av-overview-'+key).focus();
 });
+let overviewContentWidth = $('#content').clientWidth;
+new ResizeObserver(() => {
+  const width = $('#content').clientWidth;
+  if (width === overviewContentWidth) return;
+  overviewContentWidth = width;
+  if (current === 'overview') render();
+}).observe($('#content'));
 function date(v){const m=String(v||'').match(/^(\d{2})\.(\d{2})\.(\d{4})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:null;}
 window.renderRealProduction=function(){const d=window.AVERA_PRODUCTION_SNAPSHOT,s=window.AVERA_METRICS.production();const risky=s.risky;return summary([['Именованных строк',s.named,'Весь прочитанный лист; разный тип записей'],['Отмечено выполненными',s.completed,'По отметке F; без подтверждения приёмки'],['Прошёл плановый срок',s.openPastPlan,'Без отметки завершения'],['Нет плановой даты',s.openMissingPlanDate,'Среди открытых записей']])+panel('Записи с прошедшим плановым сроком',table(['Строка','Наименование','План','Отметка КД','Исполнитель'],risky.map(r=>[`<a href="https://docs.google.com/spreadsheets/d/${d.spreadsheetId}/edit#gid=142048530&range=A${r.row}:L${r.row}" target="_blank" rel="noopener noreferrer">${r.row}</a>`,safe(r.name),safe(r.end),safe(r.kd||'Не заполнено'),safe(r.executor||'Не заполнено')]))+'<p class="hint">Это календарный контроль исходного графика. Перенос срока, причина и нарушение договорной поставки отдельно не подтверждены.</p>')+panel('Противоречия факта',table(['Строка','Наименование','Фактическая дата'],s.actualWithNotDone.map(r=>[r.row,safe(r.name),safe(r.actual)])))+panel('Охват и ограничения',`<p>Прочитан диапазон A1:L1667 листа «${safe(d.sheet)}» 02.11.2026. ${s.named} именованных строк, ${s.completed} с отметкой TRUE, ${s.open} без неё. В листе смешаны операции, закупки, сводные и другие записи. Номер строки — адрес источника, а не постоянный ID. Выпуск, загрузка мощностей и процент физической готовности не рассчитаны.</p><p class="hint">Сводный лист использует иной отбор: 432 задачи и 72 выполненные. Эти итоги не заменяют полный прочитанный лист без объяснения отбора.</p>`);};
 renderers.production=window.renderRealProduction;
