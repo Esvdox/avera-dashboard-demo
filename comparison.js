@@ -22,12 +22,13 @@ function comparisonData() {
     value: row[1], periodLabel: row[0], partial: row[0].includes('ноябрь')
   }));
   const start = baseline.asOf.split('.').reverse().join('-');
-  const staffing = window.AVERA_STAFFING;
-  const staffingMetrics = staffing ? [
-    ['Предусмотрено', staffing.planned], ['Занято', staffing.planned - staffing.vacant], ['Свободно', staffing.vacant]
-  ].map(([name, value]) => ({name: name + ' по ШР', unit: 'ставки', icon: 'people', points: [
-    {date: staffing.asOf.split('.').reverse().join('-'), value}
-  ]})) : [];
+  const staffing = metrics.staffing();
+  const staffingMetrics = [
+    ['Предусмотрено','planned'], ['Занято','occupied'], ['Вакантно','vacant']
+  ].map(([name,key]) => ({name: name + ' по ШР', unit: 'ставки', icon: 'people',
+    comparableSnapshots: true, discrete: true,
+    points: staffing.map(row=>({date:row.date,value:row[key]}))
+  }));
   return [
     {name: 'Выручка', unit: 'млн ₽', before: revenue[1].value, period: '9 мес. 2026', points: revenue},
     {name: 'Текучесть', unit: '%', before: turnover[1]?.value, period: '2025', points: turnover},
@@ -100,7 +101,7 @@ function periodGraph(metric, index, axis, width) {
   const arrivalX = dateX(axis.arrival);
   const crossing = coordinates.findIndex(([x], i) => i > 0 && coordinates[i-1][0] <= arrivalX && x >= arrivalX);
   let arrivalY = Number.isFinite(metric.startBaseline) ? y(metric.startBaseline) : null;
-  if (crossing > 0) {
+  if (crossing > 0 && !metric.discrete) {
     const [x0,y0] = coordinates[crossing-1];
     const [x1,y1] = coordinates[crossing];
     const t = (arrivalX-x0)/(x1-x0);
@@ -111,7 +112,7 @@ function periodGraph(metric, index, axis, width) {
   const arrivalFill = '<defs><linearGradient id="' + arrivalFillId + '">' +
     '<stop stop-color="var(--cmp-arrival-color)" stop-opacity=".38"/><stop offset="1" stop-color="var(--cmp-arrival-color)" stop-opacity=".10"/>' +
     '</linearGradient><clipPath id="' + arrivalClipId + '"><rect x="' + arrivalX + '" y="20" width="' + (right-arrivalX) + '" height="156"/></clipPath></defs>';
-  const arrivalArea = coordinates.length > 1 && last[0] > arrivalX
+  const arrivalArea = !metric.discrete && coordinates.length > 1 && last[0] > arrivalX
     ? '<path d="' + area + '" fill="url(#' + arrivalFillId + ')" clip-path="url(#' + arrivalClipId + ')"/>'
     : Number.isFinite(metric.startBaseline)
       ? '<rect x="' + arrivalX + '" y="' + arrivalY + '" width="' + (right-arrivalX) + '" height="' + (bottom-arrivalY) + '" fill="url(#' + arrivalFillId + ')"/>'
@@ -119,7 +120,7 @@ function periodGraph(metric, index, axis, width) {
   const arrivalLine = '<path class="cmp-after-arrival' + (arrivalY === null ? ' cmp-arrival-context' : '') +
     '" d="M' + arrivalX + ' ' + bottom + 'V' + (arrivalY ?? 20) + '"><title>Приход · 26.10.2026</title></path>';
   const fillId = `cmp-period-fill-${index}`;
-  const trace = coordinates.length > 1
+  const trace = !metric.discrete && coordinates.length > 1
     ? `<defs><linearGradient id="${fillId}" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="${Math.min(...coordinates.map(pair => pair[1]))}" y2="${bottom}">
          <stop offset="0" stop-color="var(--accent)" stop-opacity=".34"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/>
        </linearGradient></defs>
@@ -158,7 +159,7 @@ function periodGraph(metric, index, axis, width) {
       <path class="cmp-start-baseline" d="M${left} ${baselineY}H${right}"/>`
     : '';
   const seriesLabel = series => series.point.label || 'Срез';
-  const legend = startLegend + (ordered.length > 1
+  const legend = (metric.discrete ? '<li>Только подтверждённые срезы; между датами НД. Ставки не равны людям.</li>' : '') + startLegend + (ordered.length > 1
     ? `<li class="cmp-series-a cmp-series-range"><i aria-hidden="true"></i>Период · ${label(ordered[0].point.date)} → ${label(ordered.at(-1).point.date)}</li>`
     : ordered.map(series => `<li class="${series.className}"><i aria-hidden="true"></i>${seriesLabel(series)} · ${label(series.point.date)}</li>`).join(''))
     + observations.filter(point => point.partial).map(point => `<li>${safe(point.periodLabel)} · ${fmt(point.value)}%</li>`).join('');
@@ -189,8 +190,8 @@ function comparisonTableData(metrics) {
   const rows = [
     ...metrics.map((metric, index) => ({
       ...metric,
-      direction: index === 1 ? 'lower' : index === 0 || index >= 4 ? 'higher' : null,
-      comparableSnapshots: index <= 3 || metric.comparable,
+      direction: metric.discrete ? null : index === 1 ? 'lower' : index === 0 || index >= 4 ? 'higher' : null,
+      comparableSnapshots: metric.comparableSnapshots || index <= 3 || metric.comparable,
       icon: metric.icon || ['wallet', 'people', 'products', 'products', 'sales', 'trend'][index],
       shortName: index === 3 ? 'Прочие SKU' : metric.name
     })),
@@ -248,14 +249,16 @@ function renderComparison() {
   const periodNote = !datesValid
     ? 'Укажите две даты. Дата «До» должна быть не раньше даты «От».'
     : chart ? 'Голубая зона — выбранный диапазон. Точки — доступные срезы.' : 'НД — нет среза на выбранную дату.';
-  const context = `${dates}<div class="cmp-context" role="status"><span>${periodNote}</span></div>`;
+  const staffingDates=window.AVERA_METRICS.staffing();
+  const staffingShortcut=staffingDates.length ? '<button type="button" class="secondary" data-staffing-dates>Срезы штатных ставок: '+staffingDates[0].date.split('-').reverse().join('.')+' → '+staffingDates.at(-1).date.split('-').reverse().join('.')+'</button>' : '';
+  const context = `${dates}${staffingShortcut}<div class="cmp-context" role="status"><span>${periodNote}</span></div>`;
   return '<section class="panel cmp-controls" aria-label="Настройки сравнения">' + switcher + context + '</section>'
     + (chart ? `<h2 class="cmp-section-title">Динамика и сравнение показателей</h2>
       <div class="cmp-time-key"><span>После прихода · 26.10.2026</span><span>Сегодня · ${comparisonToday().split('-').reverse().join('.')}</span></div>` : '')
     + (chart ? '' : '<div class="cmp-column-head"><span>База</span><span>Сейчас</span></div>')
     + '<div class="cmp-list">' + cards + '</div>'
     + `<details class="panel cmp-details"><summary>Источники и методика</summary>
-      <p>Выручка за январь–сентябрь и за полный год показана отдельно по ОФР. Текучесть 1С — увольнения за период / средняя численность × 100%; значение может превышать 100%. Январь–ноябрь 2026 отмечен отдельно на ноябре: точный день отчёта не указан. Срез SKU аттракционов — 02.11.2026. НД — нет данных.</p>
+      <p>Выручка за январь–сентябрь и за полный год показана отдельно по ОФР. Текучесть 1С — увольнения за период / средняя численность × 100%; значение может превышать 100%. Январь–ноябрь 2026 отмечен отдельно на ноябре: точный день отчёта не указан. Срез SKU аттракционов — 02.11.2026. Штатные ставки: план, занято и вакантно из общего набора штатной расстановки 1С; это не люди. Значения доступны только на даты срезов, без переноса на соседние даты. НД — нет данных.</p>
       <p>Сделки считаются по дате подписания. Маржа — сумма маржи / сумма выручки без НДС. Плановая и фактическая маржа учитываются отдельно.</p></details>
       <details class="panel cmp-details"><summary>Решения и результат</summary>
       <p>Дата решения, ответственный, срок, показатель и подтверждённый эффект.</p>
@@ -273,6 +276,11 @@ $('#content').addEventListener('change', event => {
   $(`#${id}`).focus();
 });
 $('#content').addEventListener('click', event => {
+  if(event.target.closest('[data-staffing-dates]') && current==='comparison'){
+    const rows=window.AVERA_METRICS.staffing();
+    if(rows.length){comparisonDates.from=rows[0].date;comparisonDates.to=rows.at(-1).date;render();}
+    return;
+  }
   const button = event.target.closest('[data-comparison-view]');
   if (current !== 'comparison' || !button) return;
   const {comparisonView: view} = button.dataset;
@@ -295,3 +303,4 @@ new ResizeObserver(() => {
   if (current === 'overview' || (current === 'comparison' && comparisonView === 'chart')) render();
 }).observe($('#content'));
 render();
+

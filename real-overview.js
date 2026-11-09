@@ -67,7 +67,7 @@ function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
   const area = curve + ' V' + zero + ' H' + first.x + ' Z';
   const ticks = Array.from({length: Math.round((high - low) / tickStep) + 1}, (_, i) => (low + i * tickStep));
   const clip = side => 'av-kpi-' + id + '-' + side;
-  const traces = marks.length < 2 ? '' : ['up', 'down'].map((side, i) => {
+  const traces = marks.length < 2 || id === 'staffing' ? '' : ['up', 'down'].map((side, i) => {
     const key = clip(side);
     const shade = color(i ? -1 : 1);
     const edge = i ? 176 : 28;
@@ -93,10 +93,11 @@ function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
 window.ownerOverview = function () {
   const {from, to} = overviewRange;
   const inRange = day => Boolean(from && to && day && day >= from && day <= to);
-  const staffingHistory = (window.AVERA_STAFFING_HISTORY || []).filter(row=>inRange(row.date));
+  const staffingHistory = window.AVERA_METRICS.staffing(from,to);
   const staffing = staffingHistory.at(-1);
-  const kdDate = window.AVERA_KD.asOf;
-  const products = inRange(date(kdDate)) ? window.AVERA_METRICS.products() : null;
+  const staffingNumber = value => Number.isFinite(value) ? fmt(value) : 'НД';
+  const kdDate = window.AVERA_KD?.asOf;
+  const products = inRange(date(kdDate)) && typeof window.AVERA_METRICS.products === 'function' ? window.AVERA_METRICS.products() : null;
   const finance = window.AVERA_ACCOUNTING;
   const read = window.AVERA_METRICS.value;
   const points = (dates, labels, rows, code) => dates.flatMap((day,i)=>{
@@ -117,7 +118,7 @@ window.ownerOverview = function () {
   const financeCard = (icon,label,series,chart,direction,context) => card(icon,label,series.length ? money(series.at(-1)[1])+' млн ₽':'НД',
     series.length ? series.map(([period])=>period).join(' → ')+' · млн ₽' : 'Нет среза в выбранном периоде','finance',chart,
     changeLabel(series,direction,money,'млн ₽',context));
-  const staffingSeries = staffingHistory.map(row=>[row.date.split('-').reverse().join('.'),row.planned-row.vacant,row.date]);
+  const staffingSeries = staffingHistory.filter(row=>Number.isFinite(row.occupied)).map(row=>[row.date.split('-').reverse().join('.'),row.occupied,row.date]);
   const financialChart = (id, series) => overviewChart(id, series.map(([label, value, day]) => [label, value / 1000, day]), 'млн ₽', value => money(value * 1000));
   const controls = '<div class="panel cmp-controls" aria-label="Единый период обзора"><div class="cmp-dates">' +
     [['from','От'],['to','До']].map(([key,label])=>'<div class="cmp-date-field"><label for="av-overview-'+key+'">'+label+
@@ -128,8 +129,8 @@ window.ownerOverview = function () {
     financeCard('trend','Чистая прибыль',profit,financialChart('profit',profit),1,profit.length > 1 && profit[0][1]<0 && profit.at(-1)[1]>0 ? ' · выход в прибыль' : ''),
     card('sales','Средняя маржинальность сделок','НД','Нет подтверждённого среза CRM','sales',missing),
     financeCard('wallet','Кредиторская задолженность',debt,financialChart('debt',debt),-1),
-    card('people','Численность сотрудников',staffing?fmt(staffing.planned)+' / '+fmt(staffing.planned-staffing.vacant):'НД',
-      'Ставок всего / занято'+(staffing?' · '+staffing.date.split('-').reverse().join('.') : ''),'people',
+    card('people','Штатные ставки',staffing?staffingNumber(staffing.planned)+' / '+staffingNumber(staffing.occupied):'НД',
+      'План / занято'+(staffing?' · вакантно '+staffingNumber(staffing.vacant)+' · '+staffing.date.split('-').reverse().join('.') : ' · нет среза в периоде'),'people',
       overviewChart('staffing',staffingSeries,'Занятые ставки',fmt,Math.max(0,...staffingHistory.map(row=>row.planned))),changeLabel(staffingSeries,0,fmt,'занятых ставок')),
     card('products','Готовность КД',products?products.complete+' из '+products.count+' SKU':'НД',
       products?'КД на 100% · '+kdDate:'Нет среза в выбранном периоде','products',
@@ -148,7 +149,7 @@ window.renderRealProduction=function(){const d=window.AVERA_PRODUCTION_SNAPSHOT,
 renderers.production=window.renderRealProduction;
 renderers.sales=()=>panel('Продажи · нет подтверждённого актуального среза','<p>НД. Битрикс24 не подключён к регулярной загрузке. Демо-сделки и демосуммы скрыты в реальной версии.</p><p class="hint">Нужен полный разрешённый срез воронок с ID сделок, стадиями, валютой, ответственными и датой извлечения. Договоры, оплаты и выручка требуют собственных оснований.</p>');
 renderers.products=()=>panel('Продукты и КБ · нет подтверждённого реестра','<p>НД. Реестр моделей, инициатив, ревизий и разрешений не подключён. Цель 20 SKU относится к аттракционам; фактический состав и процент достижения не подтверждены.</p><p class="hint">Отметки КД в производственном графике не подтверждают готовность полного комплекта модели.</p>');
-function labels(){document.querySelector("main").classList.toggle("av-overview-type",current==="overview");const message={overview:'Фактические источники с отдельными датами. Автоматическое получение новых данных не настроено.',finance:'Фактическая бухгалтерская отчётность. Загрузка PDF вручную; карточки и таблицы используют один набор. Прямого подключения к 1С нет.',assets:'Фактическая ведомость ОС. Итоги пересчитываются из строк, расхождения со строкой «Итого» источника показаны отдельно. Автоимпорта нет.',people:'Фактические снимки кадровых отчётов 1С. События, текучесть и средняя численность — отдельные показатели. Автоимпорта нет.',production:'Сохранённый срез «Гант Завод». Показатели рассчитаны из записей; регулярное чтение источника пока не настроено.',sales:'Актуальный срез Битрикс24 не загружен. Демонстрационные суммы в реальной версии скрыты.',products:'Подтверждённый реестр продуктов и КД не загружен. Демонстрационные статусы и количества скрыты.'};document.querySelector('main > .notice').textContent=message[current]||'Нет данных';if(['overview','production'].includes(current))document.querySelector('.asof').innerHTML='<strong>2 ноября 2026</strong><span>Периоды указаны у каждого показателя</span>';if(['sales','products'].includes(current))document.querySelector('.asof').innerHTML='<strong>Нет подтверждённого среза</strong><span>НД — не ноль</span>';if(current==='production'){$('#subtitle').textContent='Фактический срез «Гант Завод» · календарные сигналы и качество данных';}}
+function labels(){document.querySelector("main").classList.toggle("av-overview-type",current==="overview");const message={overview:'Фактические источники с отдельными датами. Автоматическое получение новых данных не настроено.',finance:'Фактическая бухгалтерская отчётность. Загрузка PDF вручную; карточки и таблицы используют один набор. Прямого подключения к 1С нет.',assets:'Фактическая ведомость ОС. Итоги пересчитываются из строк, расхождения со строкой «Итого» источника показаны отдельно. Автоимпорта нет.',people:'Фактические снимки кадровых отчётов 1С. События, текучесть и средняя численность — отдельные показатели. Автоимпорта нет.',production:'Сохранённый срез «Гант Завод». Показатели рассчитаны из записей; регулярное чтение источника пока не настроено.',sales:'Актуальный срез Битрикс24 не загружен. Демонстрационные суммы в реальной версии скрыты.',products:'Подтверждённый реестр продуктов и КД не загружен. Демонстрационные статусы и количества скрыты.'};document.querySelector('main > .notice').textContent=message[current]||'Нет данных';if(['overview','production'].includes(current))document.querySelector('.asof').innerHTML='<strong>Даты срезов различаются</strong><span>Периоды указаны у каждого показателя</span>';if(['sales','products'].includes(current))document.querySelector('.asof').innerHTML='<strong>Нет подтверждённого среза</strong><span>НД — не ноль</span>';if(current==='production'){$('#subtitle').textContent='Фактический срез «Гант Завод» · календарные сигналы и качество данных';}}
 window.applyActualLabels=function(){
   labels();
   if(current==='overview'){
@@ -158,3 +159,4 @@ window.applyActualLabels=function(){
   }
 };render();
 })();
+

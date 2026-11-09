@@ -1,6 +1,25 @@
 'use strict';
 // Derived values only. Source snapshots remain unchanged and retain their totals.
 window.AVERA_METRICS={
+ staffing(from='',to='9999-12-31'){
+  return (window.AVERA_STAFFING_SOURCE?.snapshots||[])
+   .filter(r=>r.date>=from&&r.date<=to)
+   .map(r=>({date:r.date,planned:Number.isFinite(r.planned)?r.planned:null,
+    occupied:Number.isFinite(r.occupied)?r.occupied:null,vacant:Number.isFinite(r.vacant)?r.vacant:null}))
+   .sort((a,b)=>a.date.localeCompare(b.date));
+ },
+ staffingPanel(){
+  const rows=this.staffing(),latest=rows.at(-1),number=v=>Number.isFinite(v)?fmt(v):'НД';
+  return panel('Штатные ставки',summary([
+   ['Предусмотрено',number(latest?.planned),'Ставки по штатной расстановке'],
+   ['Занято',number(latest?.occupied),'Ставки, не количество людей'],
+   ['Вакантно',number(latest?.vacant),'Ставки, не количество вакансий'],
+   ['ФОТ','НД','Подтверждённый публичный показатель не подключён']
+  ])+table(['Дата среза','Предусмотрено, ставок','Занято, ставок','Вакантно, ставок'],
+   rows.map(r=>[r.date.split('-').reverse().join('.'),number(r.planned),number(r.occupied),number(r.vacant)]))+
+   '<p class="hint">Источник: кадровые выгрузки 1С, штатная расстановка. Ставки не равны числу людей. Фактическая численность людей на дату: НД. Между срезами данные отсутствуют: интерполяция и перенос на другие даты не выполняются. Обзор и сравнение используют тот же набор. Автоматического обновления из 1С нет.</p>',
+   latest?'Последний подтверждённый срез: '+latest.date.split('-').reverse().join('.'):'НД');
+ },
  value(rows,code,column){const row=rows?.find(r=>r[1]===code);return Number.isFinite(row?.[column])?row[column]:null;},
  finance(){const d=window.AVERA_ACCOUNTING,m=this;const revenue=m.value(d?.incomeNine,'2110',3),previousRevenue=m.value(d?.incomeNine,'2110',2),profit=m.value(d?.incomeNine,'2400',3),expense=m.value(d?.incomeNine,'2120',3);return{revenue,previousRevenue,profit,cash:m.value(d?.balance,'1250',4),capital:m.value(d?.balance,'1300',4),creditors:m.value(d?.balance,'1520',4),growth:revenue!==null&&previousRevenue?100*(revenue/previousRevenue-1):null,margin:profit!==null&&revenue?100*profit/revenue:null,ordinaryResult:revenue!==null&&expense!==null?revenue+expense:null};},
  date(v){const m=String(v||'').match(/^(\d{2})\.(\d{2})\.(\d{4})$/);if(!m||+m[3]<2000)return null;const iso=`${m[3]}-${m[2]}-${m[1]}`,d=new Date(iso+'T12:00:00Z');return !isNaN(d)&&d.toISOString().slice(0,10)===iso?iso:null;},
@@ -17,8 +36,10 @@ window.AVERA_METRICS={
 window.AVERA_SOURCE_STATUS=()=>[
  ['Бухгалтерия',window.AVERA_ACCOUNTING?.asof||'НД',window.AVERA_ACCOUNTING?.updated||'НД','Ручной снимок PDF; автоимпорта нет'],
  ['Основные средства',window.AVERA_FIXED_ASSETS?.asOf||'НД','02.11.2026','Ручной снимок ведомости; автоимпорта нет'],
+ ['Штатные ставки',window.AVERA_METRICS.staffing().map(r=>r.date).join(' / '),window.AVERA_STAFFING_SOURCE?.updated||'НД','Ручные срезы расстановки 1С; только агрегаты ставок'],
  ['Кадры', '2024–2026; события по 02.11.2026',window.AVERA_HR_TURNOVER?.updated||'НД','Снимки отчётов 1С; прямого подключения нет'],
  ['Гант Завод',window.AVERA_PRODUCTION_SNAPSHOT?.asOf||'НД',window.AVERA_PRODUCTION_SNAPSHOT?.asOf||'НД','Сохранённый срез; регулярное чтение не настроено'],
  ['Битрикс24','НД','НД','Актуальный срез не загружен'],
  ['Продукты и КБ','НД','НД','Подтверждённый реестр не загружен']
 ];
+
