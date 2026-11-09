@@ -167,3 +167,5 @@ body#avera-owner{margin:0;font:var(--text-base)/1.45 var(--font-ui);background:v
 #avera-owner.dark .av-kpi-delta-bad{color:#ff98aa}
 
 @container (max-width:330px){#avera-owner .av-profit-chart .av-kpi-minor-tick{display:none}}
+#avera-owner .av-kpi-link{color:var(--muted);text-decoration:none;width:fit-content}
+#avera-owner .av-overview-series{width:fit-content;max-width:100%;padding:5px 9px;color:var(--text);font-size:12px}
