@@ -4,7 +4,7 @@ tabs.splice(1, 0, ['comparison', 'Сравнение', 'Сравнение', '']
 window.avNavIcons.comparison = 'trend';
 
 let comparisonView = new URLSearchParams(location.search).get('view') === 'charts' ? 'chart' : 'table';
-const comparisonDates = {from: '2025-09-30', to: '2026-09-30'};
+const comparisonDates = {from: '2025-09-30', to: comparisonToday()};
 
 function comparisonData() {
   const metrics = window.AVERA_METRICS;
