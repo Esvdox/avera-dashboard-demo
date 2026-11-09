@@ -151,7 +151,7 @@ function periodGraph(metric, index, axis, width) {
     const [px,yp]=secondaryCoordinates[i-1], third=(x-px)/3;
     return 'C'+(px+third)+' '+yp+' '+(x-third)+' '+py+' '+x+' '+py;
   }).join(' ');
-  const secondaryTrace = secondaryCoordinates.length ? '<g class="cmp-occupied-series">' + (secondaryCoordinates.length>1 ? '<path class="cmp-period-trace" vector-effect="non-scaling-stroke" stroke-dasharray="4 4" d="'+secondaryCurve+'"/>' : '') + secondaryCoordinates.map(([x,py],i)=>'<circle cx="'+x+'" cy="'+py+'" r="3" fill="var(--surface)" stroke="var(--accent)"/><text class="cmp-point-label" x="'+(x-12)+'" y="'+Math.min(188,py+19)+'" text-anchor="end">'+fmt(secondaryPoints[i].value)+'</text>').join('')+'</g>' : '';
+  const secondaryTrace = secondaryCoordinates.length ? '<g class="cmp-occupied-series">' + (secondaryCoordinates.length>1 ? '<path class="cmp-period-trace" vector-effect="non-scaling-stroke" stroke-dasharray="4 4" d="'+secondaryCurve+'"/>' : '') + secondaryCoordinates.map(([x,py],i)=>'<circle cx="'+x+'" cy="'+py+'" r="3" fill="var(--surface)" stroke="var(--accent)"/><text class="cmp-point-label" x="'+(x-12)+'" y="'+(i>0 && x-secondaryCoordinates[i-1][0]<90 && Math.abs(py-secondaryCoordinates[i-1][1])<24 ? Math.max(12,py-18) : Math.min(188,py+20))+'" text-anchor="end">'+fmt(secondaryPoints[i].value)+'</text>').join('')+'</g>' : '';
   const marks = periods.map((series, i) => {
     const py = y(series.point.value);
     const x = series.x;
