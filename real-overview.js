@@ -23,7 +23,7 @@ function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
   const tickStep = Math.ceil(span / (4 * step)) * step;
   const low = Math.floor(minimum / tickStep) * tickStep;
   const high = Math.max(tickStep, Math.ceil(maximum / tickStep) * tickStep);
-  const y = value => 28 + (high - value) / (high - low) * 126;
+  const y = value => 36 + (high - value) / (high - low) * 118;
   const zero = y(0);
   const color = value => value < 0 ? 'var(--av-profit-loss)' : 'var(--accent)';
   const marks = points.map(([label, value], i) => ({
@@ -47,9 +47,9 @@ function overviewChart(id, points, unit, format = fmt, ceiling = 0) {
       '"><path d="' + area + '" fill="currentColor" opacity=".25"/><path d="' + curve + '" fill="none" stroke="currentColor" stroke-width="2.5"/></g>').join('');
   return '<svg class="av-profit-chart" viewBox="0 0 420 198" role="img" aria-label="' +
     safe(unit + '. ' + marks.map(mark => mark.label + ': ' + format(mark.value)).join('. ')) + '">' +
-    ticks.map(value => '<path d="M65 ' + y(value) + 'H392" class="av-kpi-gridline"/><text x="53" y="' +
+    ticks.map(value => '<path d="M65 ' + y(value) + 'H392" class="av-kpi-gridline"/><text class="' + (Math.abs(Math.round(value/tickStep))%2 ? 'av-kpi-minor-tick' : '') + '" x="53" y="' +
       (y(value) + 4) + '" text-anchor="end">' + safe(fmt(value)) + '</text>').join('') + traces +
-    '<path d="M65 28V154 M65 ' + zero + 'H392" class="av-profit-axis"/>' +
+    '<path d="M65 36V154 M65 ' + zero + 'H392" class="av-profit-axis"/>' +
     marks.map(mark => '<circle cx="' + mark.x + '" cy="' + mark.y + '" r="3.5" fill="' + color(mark.value) +
       '"/><text x="' + mark.x + '" y="' + (mark.y - 16) + '" fill="' + color(mark.value) + '" text-anchor="middle">' +
       safe(format(mark.value)) + '</text><text x="' + mark.x + '" y="184" text-anchor="middle">' + safe(mark.label) + '</text>').join('') +

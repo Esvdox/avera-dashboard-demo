@@ -125,6 +125,8 @@ body#avera-owner{margin:0;font:var(--text-base)/1.45 var(--font-ui);background:v
 #avera-owner .av-owner-kpis{grid-template-columns:minmax(0,1fr)}
 #avera-owner .av-owner-kpis .av-metric{display:flex;grid-row:auto}
 #avera-owner .av-kpi-chart{border-top:1px solid var(--line);margin-top:12px;padding-top:10px}
+#avera-owner .av-kpi-chart{container-type:inline-size}
+#avera-owner main.av-overview-type .av-profit-chart text{font-size:calc(420px / min(100cqw,740px) * 12px)}
 #avera-owner .av-owner-kpis .av-metric>.av-muted{flex-shrink:0;min-height:1.4em;margin:0 0 10px}
 #avera-owner .av-kpi-chart p{margin:0;font-size:12px}
 #avera-owner .av-kpi-bars{list-style:none;padding:0;margin:0;display:grid;gap:8px}
@@ -162,3 +164,5 @@ body#avera-owner{margin:0;font:var(--text-base)/1.45 var(--font-ui);background:v
 #avera-owner.dark .av-kpi-delta-good{color:#72e4a1}
 #avera-owner .av-kpi-delta-bad{color:#bd3d56}
 #avera-owner.dark .av-kpi-delta-bad{color:#ff98aa}
+
+@container (max-width:330px){#avera-owner .av-profit-chart .av-kpi-minor-tick{display:none}}
