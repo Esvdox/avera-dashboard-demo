@@ -273,11 +273,8 @@ function renderComparison() {
   </div>`;
   const periodNote = !datesValid
     ? 'Укажите две даты. Дата «До» должна быть не раньше даты «От».'
-    : chart ? '' : 'НД — нет среза на выбранную дату.';
-  const staffingDates=window.AVERA_METRICS.staffing();
-  const staffingShortcut=staffingDates.length ? '<button type="button" class="secondary" data-staffing-dates>Срезы штатных ставок: '+staffingDates[0].date.split('-').reverse().join('.')+' → '+staffingDates.at(-1).date.split('-').reverse().join('.')+'</button>' : '';
-  const debtShortcut='<button type="button" class="secondary" data-debt-dates>Баланс: 31.12.2024 → 30.09.2026</button>';
-  const context = `${dates}${staffingShortcut}${debtShortcut}${periodNote ? `<div class="cmp-context" role="status"><span>${periodNote}</span></div>` : ''}`;
+    : '';
+  const context = `${dates}${periodNote ? `<div class="cmp-context" role="status"><span>${periodNote}</span></div>` : ''}`;
   return '<section class="panel cmp-controls" aria-label="Настройки сравнения">' + switcher + context + '</section>'
     + (chart ? `<h2 class="cmp-section-title">Динамика и сравнение показателей</h2>` : '')
     + (chart ? '' : '<div class="cmp-column-head"><span>База</span><span>Сейчас</span></div>')
