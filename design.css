@@ -172,4 +172,5 @@ body#avera-owner{margin:0;font:var(--text-base)/1.45 var(--font-ui);background:v
 #avera-owner .av-overview-section{font:inherit;font-weight:700;margin:10px 0 0}
 #avera-owner .av-owner-kpis .av-status-card{min-height:0}
 
-#avera-owner .av-owner-kpis .av-status-compact .av-number{font-size:12px}
+#avera-owner .av-kpi-values .av-team-delta{font-size:12px;font-weight:700}
+#avera-owner main.av-overview-type .av-kpi-values:has(> .av-team-delta){column-gap:8px}

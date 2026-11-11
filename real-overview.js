@@ -182,16 +182,16 @@ function seriesPoints(key, unit) {
     .map(([day, value, label, , partial]) => [label, value * scale, day, partial]);
 }
 
-function summaryCard({id, icon, label, route, unit, points, note = '', value, secondary = [], options}) {
+function summaryCard({id, icon, label, route, unit, points, note = '', value, secondary = [], options, change = ''}) {
   const last = points.at(-1);
   const displayed = value ?? (last ? fmt(last[1]) + ' ' + unit : 'НД');
   const description = note === null ? null : note || (last ? last[0] : 'Нет среза в выбранном периоде');
   return card(icon, label, displayed, description, route,
-    overviewChart(id, points, label + ', ' + unit, fmt, secondary, options), '', '');
+    overviewChart(id, points, label + ', ' + unit, fmt, secondary, options), change, '');
 }
 
-function statusCard(icon, label, value, note, route, compact = false) {
-  return `<article class="av-metric av-status-card${compact ? ' av-status-compact' : ''}">
+function statusCard(icon, label, value, note, route) {
+  return `<article class="av-metric av-status-card">
     <a class="av-label av-kpi-link" href="#${route}">${window.avIcon(icon)}${safe(label)}</a>
     <div class="av-number">${safe(value)}</div><div class="av-muted">${safe(note)}</div>
   </article>`;
@@ -286,8 +286,12 @@ function teamCard() {
   if (dateInRange('2024-01-01')) history.unshift(['Условный старт',0,'2024-01-01']);
   const latest = planned.at(-1);
   const actual = latest && occupied.find(point => point[2] === latest[2]);
+  const previous = actual && occupied.findLast(point => point[2] < actual[2]);
+  const delta = previous ? actual[1] - previous[1] : 0;
+  const change = delta === 0 ? '' : '<span class="av-team-delta">' +
+    safe((delta > 0 ? '+' : '−') + fmt(Math.abs(delta)) + ' занятых ставок') + '</span>';
   return summaryCard({id:'team-history', icon:'people', label:'Команда', route:'people', unit:'ставки',
-    points:[...history,...planned], secondary:occupied, options:{branch:true},
+    points:[...history,...planned], secondary:occupied, options:{branch:true}, change,
     value:actual ? fmt(latest[1]) + ' / ' + fmt(actual[1]) + ' ставки' : history.length ? fmt(history.at(-1)[1]) + ' чел.' : 'НД',
     note:'2024–2025 — средняя численность. С 16.10.2026 сплошная — всего ставок, пунктир — занято.'});
 }
@@ -310,9 +314,7 @@ window.ownerOverview = function () {
     ['Маржа',[marginCard()]],
     ['Деньги и обязательства',[amountCard('cash','Остаток денег по ДДС','Остаток по месячной выгрузке ДДС'),balanceCard(),loanCard()]],
     ['Продуктовый портфель',[productsCard()]],
-    ['Команда',[teamCard(),statusCard('people','Штатная расстановка · 16.10 → 06.11',
-      dateInRange('2026-11-06') ? '+7 занятых ставок' : 'НД',
-      dateInRange('2026-11-06') ? '58,46 → 65,46 ставки. Решение и его вклад в изменение пока не подтверждены' : 'Нет среза в выбранном периоде','people',true)]]
+    ['Команда',[teamCard()]]
   ];
   return controls + '<section class="av-grid av-owner-kpis" aria-label="Показатели компании">' +
     sections.map(([name, cards], i) => '<h2 class="av-overview-section">' + (i+1) + '. ' + safe(name) + '</h2>' + cards.join('')).join('') + '</section>';
