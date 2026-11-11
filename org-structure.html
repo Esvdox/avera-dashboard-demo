@@ -51,7 +51,7 @@ function node(item, depth=0){
 }
 const root=main.appendChild(card(data,true));root.classList.add('root');
 const tree=main.appendChild(document.createElement('div'));tree.className='tree';
-const [executive,production,service,accounting,hr,quality,warehouse,safety,energy]=data.children;
+const [executive,production,service,accounting,hr,quality,warehouse,safety,energy,qms]=data.children;
 const groups=[executive,production,service,quality,accounting,warehouse,hr,safety,energy,qms].map(item=>[item]);
 const colors=['#8366a2','#468dbb','#c87860','#5a9c66','#b86691'];
 const targets=groups.map((group,index)=>{
@@ -72,6 +72,7 @@ function wires(){
 }
 wires();new ResizeObserver(wires).observe(tree);addEventListener('beforeprint',wires);
 </script></html>
+
 
 
 
