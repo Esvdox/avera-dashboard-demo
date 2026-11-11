@@ -219,8 +219,8 @@ function cashDelta(points, subject, periodLabel) {
   }
   const increased = delta > 0;
   const tone = increased ? 'good' : 'bad';
-  const change = (increased ? '+' : '−') + amount + ' ' + cashUnit + ' · ' +
-    subject + (increased ? ' вырос' : ' снизился');
+  const change = (increased ? '+' : '−') + amount + ' ' + cashUnit +
+    (increased ? ' · ' + subject + ' вырос' : '');
   return '<span class="av-kpi-delta av-kpi-delta-' + tone + '" title="' + safe(period) + '">' +
     safe(change) + '</span>';
 }
