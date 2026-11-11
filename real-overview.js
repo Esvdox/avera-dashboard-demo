@@ -235,7 +235,7 @@ function cashMovementCard() {
     <div class="av-label">Остаток на конец месяца</div>
     <div class="av-number av-kpi-values"><span>${safe(fmt(balance[1]) + ' ' + cashUnit)}</span>${balanceChange}</div>
   </div>` : '';
-  const legend = last || balance ? '<div class="av-cash-legend">' +
+  const legend = last || balance ? '<div class="av-cash-legend av-chart-legend">' +
     (last ? '<span><i aria-hidden="true"></i>Чистый денежный поток</span>' : '') +
     (balance ? '<span><i class="av-cash-dash" aria-hidden="true"></i>Остаток на конец месяца</span>' : '') +
     '</div>' : '';
@@ -280,15 +280,33 @@ function salesCard(contracts) {
     note:null, options:{quarterTicks:true, integerAxis:true}});
 }
 
+function marginChange(snapshot) {
+  const baseline = dateInRange(snapshot.asOf) &&
+    seriesPoints('weightedMargin', '%').find(point => point[2] < snapshot.asOf);
+  if (!baseline) {
+    return '<span class="av-kpi-delta" title="Нет второго сопоставимого среза в выбранном периоде">Динамика НД</span>';
+  }
+  const delta = snapshot.weightedRate * 100 - baseline[1];
+  const amount = fmt(Math.abs(delta));
+  const tone = amount === '0' ? '' : ' av-kpi-delta-' + (delta > 0 ? 'good' : 'bad');
+  const sign = amount === '0' ? '' : delta > 0 ? '+' : '−';
+  return `<span class="av-kpi-delta${tone}">${safe(sign + amount + ' п. п.')}</span>`;
+}
+
 function marginCard() {
   const snapshot = window.AVERA_OVERVIEW_SERIES.contractAnalysisSnapshot;
   const rows = snapshot?.positions || [];
   const points = rows.map(([price], i) => ['Позиция №' + (i + 1), price / 1e6, i + 1]);
   const secondary = rows.map(([, rate], i) => ['Позиция №' + (i + 1), rate * 100, i + 1]);
-  return summaryCard({id:'deal-margin', icon:'sales', label:'Стоимость и рентабельность договоров', route:'sales',
-    unit:cashUnit, points, secondary, options:{rightAxis:true, ordinal:true},
-    value:rows.length ? fmt(snapshot.weightedRate * 100) + '% взвешенная рентабельность' : 'НД',
-    note:rows.length ? null : 'Нет данных анализа контрактов'});
+  const label = 'Стоимость и рентабельность договоров';
+  const value = 'Взвешенная рентабельность — ' + (rows.length ? fmt(snapshot.weightedRate * 100) + '%' : 'НД');
+  const legend = rows.length ? `<div class="av-chart-legend av-margin-legend">
+    <span><i aria-hidden="true"></i>Стоимость с НДС, млн ₽</span>
+    <span><i class="av-margin-dash" aria-hidden="true"></i>Рентабельность, %</span>
+  </div>` : '';
+  return card('sales', label, value, null, 'sales',
+    overviewChart('deal-margin', points, label + ', ' + cashUnit, fmt, secondary,
+      {rightAxis:true, ordinal:true}) + legend, rows.length ? marginChange(snapshot) : '', '');
 }
 
 function balanceCard() {
