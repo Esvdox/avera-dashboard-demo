@@ -116,17 +116,28 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
   const rateHigh = Math.max(4, Math.ceil(Math.max(...secondaryValues) / 4) * 4);
   const secondaryY = options.rightAxis ? value => 28 + (rateHigh - value) / (rateHigh - rateLow) * 148 : y;
   const secondMarks = secondary.map(([label, value, day]) => ({label, value, x:x(coordinate(day)), y:secondaryY(value)}));
-  const secondaryColor = options.rightAxis ? 'var(--av-management)' : 'var(--muted)';
+  const compactSecondary = options.compactSecondary;
+  const secondaryColor = options.secondaryColor ?? (options.rightAxis ? 'var(--av-management)' : 'var(--muted)');
   const rightTicks = options.rightAxis && secondMarks.length ? Array.from({length:5}, (_, i) => rateLow + (rateHigh-rateLow)*i/4)
     .map(value => `<text x="${right + 5}" y="${secondaryY(value) + 4}" fill="${secondaryColor}">${safe(fmt(value))}%</text>`).join('') : '';
   const branch = options.branch && secondMarks.length ? marks.find(mark => mark.x === secondMarks[0].x) : null;
   const secondPath = smoothCurve(branch ? [branch, ...secondMarks] : secondMarks);
   const secondaryLine = secondMarks.length ? `<path class="av-secondary-line" d="${secondPath}" fill="none" stroke="${secondaryColor}" stroke-width="1.5" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>` +
-    secondMarks.map((mark,i) => `<circle class="av-secondary-point" r="3" fill="${secondaryColor}" cx="${mark.x}" cy="${mark.y}"><title>${safe(mark.label + ': ' + fmt(mark.value) + (options.rightAxis ? '%' : ''))}</title></circle>` +
-      (options.rightAxis && (width < 600 || (options.ordinal && i !== secondMarks.length - 1)) ? '' : `<text class="av-kpi-point-label" x="${mark.x + (i % 2 ? 7 : -7)}" y="${Math.min(175, mark.y + 17)}" text-anchor="${i % 2 ? 'start' : 'end'}" fill="${secondaryColor}">${safe(fmt(mark.value))}${options.rightAxis ? '%' : ''}</text>`)).join('') : '';
+    secondMarks.map((mark, i) => {
+      const value = fmt(mark.value) + (options.rightAxis ? '%' : '');
+      const dot = `<circle class="av-secondary-point" r="${compactSecondary ? 2 : 3}" fill="${secondaryColor}" cx="${mark.x}" cy="${mark.y}"><title>${safe(mark.label + ': ' + value)}</title></circle>`;
+      if (options.rightAxis && width < 600) return dot;
+      if ((compactSecondary || options.ordinal) && i !== secondMarks.length - 1) return dot;
+      const labelOnRight = !compactSecondary && i % 2;
+      const labelX = mark.x + (labelOnRight ? 7 : -7);
+      const labelY = Math.min(175, mark.y + (compactSecondary ? -10 : 17));
+      return dot + `<text class="av-kpi-point-label" x="${labelX}" y="${labelY}" text-anchor="${labelOnRight ? 'start' : 'end'}" fill="${secondaryColor}">${safe(value)}</text>`;
+    }).join('') : '';
   const coverage = (options.contractDates || []).map(([label,count,day]) => `<path class="contract-coverage-tick" d="M${x(Date.parse(day))} 177v6" stroke="var(--muted)" stroke-width="1.5"><title>${safe(label + ' · договоров: ' + count)}</title></path>`).join('');
+  const balanceDescription = compactSecondary && secondMarks.length
+    ? '. Остаток на конец месяца: ' + secondMarks.map(mark => mark.label + ': ' + fmt(mark.value)).join('. ') : '';
   return '<svg class="av-profit-chart" viewBox="0 0 ' + width + ' 202" role="img" aria-label="' +
-    safe(unit + '. ' + marks.map(mark => mark.label + ': ' + format(mark.value)).join('. ') + (options.ordinal ? '. Рентабельность: ' + secondMarks.map(mark => mark.label + ': ' + fmt(mark.value) + '%').join('. ') : '') + (showArrival ? '. ' + arrivalLabel : '')) + '">' +
+    safe(unit + '. ' + marks.map(mark => mark.label + ': ' + format(mark.value)).join('. ') + (options.ordinal ? '. Рентабельность: ' + secondMarks.map(mark => mark.label + ': ' + fmt(mark.value) + '%').join('. ') : '') + balanceDescription + (showArrival ? '. ' + arrivalLabel : '')) + '">' +
     ticks.map(value => '<path d="M' + left + ' ' + y(value) + 'H' + right + '" class="av-kpi-gridline"/><text class="' + (Math.abs(Math.round(value/tickStep))%2 ? 'av-kpi-minor-tick' : '') + '" x="42" y="' +
       (y(value) + 4) + '" text-anchor="end">' + safe(fmt(value)) + '</text>').join('') + traces + management +
     '<path d="M' + left + ' 28V176 M' + left + ' ' + zero + 'H' + right + '" class="av-profit-axis"/>' + secondaryLine + rightTicks + coverage +
@@ -200,6 +211,24 @@ function statusCard(icon, label, value, note, route) {
 function amountCard(id, label, note) {
   const points = seriesPoints(id, cashUnit);
   return summaryCard({id, icon:'wallet', label, route:'finance', unit:cashUnit, points, note});
+}
+
+function cashMovementCard() {
+  const points = seriesPoints('netCashFlow', cashUnit);
+  const balances = seriesPoints('cash', cashUnit);
+  const last = points.at(-1), balance = balances.at(-1), previous = points.at(-2);
+  const delta = previous && last ? last[1] - previous[1] : 0;
+  const change = delta === 0 ? '' : '<span class="av-kpi-delta av-kpi-delta-' + (delta > 0 ? 'good' : 'bad') + '">' +
+    safe((delta > 0 ? '+' : '−') + fmt(Math.abs(delta)) + ' ' + cashUnit + ' · ' +
+      (delta > 0 ? 'поток вырос' : 'поток снизился')) + '</span>';
+  const label = 'Чистый денежный поток и остатки на счетах';
+  const note = last ? last[0] + ' · по ДДС' : 'Нет среза в выбранном периоде';
+  const legend = last ? '<div class="av-cash-legend"><span><i aria-hidden="true"></i>Чистый денежный поток</span>' +
+    (balance ? '<span><i class="av-cash-dash" aria-hidden="true"></i>Остаток на конец месяца <strong>' +
+      safe(fmt(balance[1]) + ' ' + cashUnit) + '</strong></span>' : '') + '</div>' : '';
+  return card('wallet', label, last ? fmt(last[1]) + ' ' + cashUnit : 'НД', note, 'finance',
+    overviewChart('netCashFlow', points, label + ', ' + cashUnit, fmt, balances,
+      {compactSecondary:true, secondaryColor:'var(--av-cash-balance)'}), change, legend);
 }
 
 function financeCard(id, label, icon) {
@@ -307,7 +336,7 @@ window.ownerOverview = function () {
   const statusVisible = dateInRange('2026-11-09');
   const sections = [
     ['Финансовый результат',[financeCard('revenue','Выручка','wallet'),financeCard('profit','Чистая прибыль','trend'),
-      amountCard('payments','Оплаты от покупателей','Помесячные поступления по ДДС')]],
+      cashMovementCard()]],
     ['Продажи',[salesCard(contracts),statusCard('sales','На подписании',statusVisible ? '1 договор · 3 крупных продукта' : 'НД',
       statusVisible ? 'Оперативный срез на 09.11.2026 · сумма и дата подписания уточняются' : 'Нет среза в выбранном периоде','sales')]],
     ['Исполнение заказа',[statusCard('sales','Заказ в работе',statusVisible ? '1 крупный заказ' : 'НД',

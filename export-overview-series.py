@@ -38,17 +38,21 @@ def add_summary_series(workbook, data):
     data['receivables'] = [point(day, amount) for day, _, group, label, _, amount, *_ in
                            workbook['Отчётность'].iter_rows(min_row=2, values_only=True)
                            if group == 'Баланс' and 'дебиторская задолженность' in label.lower()]
-    for key in ('cash', 'payments', 'loanCash', 'loanReceipts'):
+    for key in ('cash', 'payments', 'loanCash', 'loanReceipts', 'netCashFlow'):
         data[key] = []
     months = [row for row in workbook['ДДС'].iter_rows(min_row=2, values_only=True) if row[0]]
     accumulated = 0
     if months:
         data['loanCash'].append(point(months[0][0] - datetime.timedelta(days=1), 0, 'Начало накопления по ДДС'))
-    for month, cutoff, _, _, _, closing, paid, _, _, _, received, repaid, *_ in months:
+    for month, cutoff, incoming, outgoing, net_flow, closing, paid, _, _, _, received, repaid, *_ in months:
         end = month.replace(day=calendar.monthrange(month.year, month.month)[1])
         day = min(end, cutoff)
         caption = month.strftime('%m.%Y')
         accumulated += (received or 0) - (repaid or 0)
+        if not math.isclose(incoming - outgoing, net_flow, rel_tol=0, abs_tol=.01):
+            raise ValueError(f'Чистый денежный поток не сходится за {caption}')
+        flow_caption = day.strftime('1–%d.%m.%Y') if day < end else caption
+        data['netCashFlow'].append(point(day, net_flow, flow_caption))
         data['cash'].append(point(day, closing, caption))
         data['payments'].append(point(day, paid, caption))
         data['loanCash'].append(point(day, accumulated, caption))

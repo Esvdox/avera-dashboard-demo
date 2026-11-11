@@ -174,3 +174,11 @@ body#avera-owner{margin:0;font:var(--text-base)/1.45 var(--font-ui);background:v
 
 #avera-owner .av-kpi-values .av-team-delta{font-size:12px;font-weight:700}
 #avera-owner main.av-overview-type .av-kpi-values:has(> .av-team-delta){column-gap:8px}
+
+:root{--av-cash-balance:#53729a}
+body.dark{--av-cash-balance:#b5c9e2}
+.av-cash-legend{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;margin-top:8px;font-size:12px;color:var(--muted)}
+.av-cash-legend span{display:inline-flex;align-items:center;gap:6px}
+.av-cash-legend i{width:18px;border-top:1.5px solid var(--accent)}
+.av-cash-legend i.av-cash-dash{border-top-style:dashed;border-color:var(--av-cash-balance)}
+.av-cash-legend strong{color:var(--text)}
