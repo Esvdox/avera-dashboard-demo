@@ -196,7 +196,7 @@ function seriesPoints(key, unit) {
   const scale = unit === cashUnit ? 1 / 1e6 : unit === '%' ? 100 : 1;
   return (window.AVERA_OVERVIEW_SERIES[key] || [])
     .filter(([day]) => dateInRange(day))
-    .map(([day, value, label, , partial]) => [label, value * scale, day, partial]);
+    .map(([day, value, label, basis, partial]) => [label, value * scale, day, partial, basis]);
 }
 
 function summaryCard({id, icon, label, route, unit, points, note = '', value, secondary = [], options, change = ''}) {
@@ -254,7 +254,19 @@ function cashMovementCard() {
 
 function financeCard(id, label, icon) {
   const points = seriesPoints(id, cashUnit);
-  return summaryCard({id, icon, label, route:'finance', unit:cashUnit, points, note:null});
+  const last = points.at(-1);
+  const first = last?.[4] && points.find(point => point[2] < last[2] && point[4] === last[4]);
+  let change = '';
+  if (first) {
+    const delta = last[1] - first[1];
+    const amount = fmt(Math.abs(delta));
+    const sign = amount === '0' ? '' : delta > 0 ? '+' : '−';
+    const tone = amount === '0' ? '' : ' av-kpi-delta-' + (delta > 0 ? 'good' : 'bad');
+    const result = id === 'profit' && first[1] < 0 && last[1] > 0 ? ' · выход в прибыль' : '';
+    const period = first[0] + ' → ' + last[0];
+    change = `<span class="av-kpi-delta${tone}" title="${safe(period)}">${safe(sign + amount + ' ' + cashUnit + result)}</span>`;
+  }
+  return summaryCard({id, icon, label, route:'finance', unit:cashUnit, points, change, note:null});
 }
 
 function quarterOf(day) {
