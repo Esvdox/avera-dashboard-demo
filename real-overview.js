@@ -286,9 +286,10 @@ function teamCard() {
   if (dateInRange('2024-01-01')) history.unshift(['Условный старт',0,'2024-01-01']);
   const latest = planned.at(-1);
   const actual = latest && occupied.find(point => point[2] === latest[2]);
-  const previous = actual && occupied.findLast(point => point[2] < actual[2]);
-  const delta = previous ? actual[1] - previous[1] : 0;
-  const change = delta === 0 ? '' : '<span class="av-team-delta">' +
+  const first = actual && occupied.find(point => point[2] < actual[2]);
+  const delta = first ? actual[1] - first[1] : 0;
+  const tone = delta > 0 ? 'good' : 'bad';
+  const change = delta === 0 ? '' : '<span class="av-team-delta av-kpi-delta av-kpi-delta-' + tone + '">' +
     safe((delta > 0 ? '+' : '−') + fmt(Math.abs(delta)) + ' занятых ставок') + '</span>';
   return summaryCard({id:'team-history', icon:'people', label:'Команда', route:'people', unit:'ставки',
     points:[...history,...planned], secondary:occupied, options:{branch:true}, change,
