@@ -10,7 +10,8 @@ function card(icon, label, value, note, route, chart, change, controls) {
 }
 
 const overviewRange = {from: '2024-01-01', to: new Intl.DateTimeFormat('sv-SE', {timeZone:'Europe/Moscow'}).format(new Date())};
-const arrivalDate = Date.parse('2026-10-26');
+const arrivalDay = '2026-10-26';
+const arrivalDate = Date.parse(arrivalDay);
 const arrivalLabel = 'Начало периода управления · 26.10.2026';
 const missing = '<p class="av-muted">Нет данных за выбранный период</p>';
 
@@ -90,7 +91,7 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
       '" stop-opacity="0"/></linearGradient></defs><g clip-path="url(#' + key + ')"><path d="' +
       area + '" fill="url(#' + key + '-fill)"/><path d="' + curve + '" fill="none" stroke="' + shade + '" stroke-width="1.5" vector-effect="non-scaling-stroke"/></g>';
   }).join('');
-  const showArrival = !options.ordinal && start <= arrivalDate && arrivalDate <= end;
+  const showArrival = !options.ordinal && dateInRange(arrivalDay);
   let management = '';
   if (showArrival) {
     const arrivalX = x(arrivalDate);
@@ -106,6 +107,10 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
     if (curveMarks.length > 1 && last.x > arrivalX) {
       const key = clip('management');
       management += `<defs><clipPath id="${key}-clip"><rect x="${arrivalX}" y="28" width="${right - arrivalX}" height="148"/></clipPath><linearGradient id="${key}-fill" x2="0" y2="100%"><stop stop-color="var(--av-management)" stop-opacity=".38"/><stop offset="1" stop-color="var(--av-management)" stop-opacity=".12"/></linearGradient></defs><path d="${area}" fill="url(#${key}-fill)" clip-path="url(#${key}-clip)"/>`;
+    }
+    // The zero-to-curve segment can be only a few pixels for a series near zero.
+    if (options.arrivalGuide && arrivalY !== undefined) {
+      management += `<path class="av-management-guide" d="M${arrivalX} 28V176" fill="none" stroke="var(--av-management)" stroke-width="1.5" stroke-dasharray="3 4" vector-effect="non-scaling-stroke"><title>${arrivalLabel}</title></path>`;
     }
     const marker = arrivalY === undefined ? `M${arrivalX} 28V176` : `M${arrivalX} ${zero}V${arrivalY}`;
     const dash = arrivalY === undefined ? ' stroke-dasharray="3 4"' : '';
@@ -238,11 +243,12 @@ function cashMovementCard() {
   const legend = last || balance ? '<div class="av-cash-legend av-chart-legend">' +
     (last ? '<span><i aria-hidden="true"></i>Чистый денежный поток</span>' : '') +
     (balance ? '<span><i class="av-cash-dash" aria-hidden="true"></i>Остаток на конец месяца</span>' : '') +
+    (dateInRange(arrivalDay) ? '<span><i class="av-arrival-key" aria-hidden="true"></i>' + arrivalLabel + '</span>' : '') +
     '</div>' : '';
   const label = 'Чистый денежный поток и остатки на счетах';
   return card('wallet', label, last ? fmt(last[1]) + ' ' + cashUnit : 'НД', null, 'finance',
     overviewChart('netCashFlow', points, label + ', ' + cashUnit, fmt, balances,
-      {compactSecondary:true, secondaryColor:'var(--av-cash-balance)'}) + legend, change, balanceKpi);
+      {compactSecondary:true, secondaryColor:'var(--av-cash-balance)', arrivalGuide:true}) + legend, change, balanceKpi);
 }
 
 function financeCard(id, label, icon) {
