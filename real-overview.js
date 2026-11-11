@@ -38,11 +38,17 @@ function overviewTimeTicks(start, end, count) {
 
 function overviewChart(id, points, unit, format = fmt, secondary = [], options = {}) {
   if (!points.length && !secondary.length && !options.contractDates?.length) return missing;
-  const start = Date.parse(overviewRange.from), end = Date.parse(overviewRange.to);
+  const start = options.ordinal ? 1 : Date.parse(overviewRange.from);
+  const end = options.ordinal ? points.length : Date.parse(overviewRange.to);
+  const coordinate = key => options.ordinal ? key : Date.parse(key);
   const width = $('#content').clientWidth - 34;
   const left = 56, right = width - (options.rightAxis ? 52 : 26);
   const x = day => end === start ? (left + right) / 2 : left + 28 + (right - left - 56) * (day - start) / (end - start);
-  const ticksX = options.quarterTicks ? points.map(([label,,day])=>({date:Date.parse(day),label}))
+  const ordinalStep = Math.max(1, Math.ceil((end - start) / Math.max(1, Math.floor((right - left - 56) / 49))));
+  const ticksX = options.ordinal ? points
+    .filter(([, , position]) => position === end || ((position - 1) % ordinalStep === 0 && (position === 1 || end - position >= ordinalStep)))
+    .map(([, , position]) => ({date:position, label:'№' + position}))
+    : options.quarterTicks ? points.map(([label,,day])=>({date:Date.parse(day),label}))
     .filter((tick, i, ticks) => i === ticks.length - 1 || (i === 0 && x(ticks.at(-1).date) - x(tick.date) >= 56) ||
       (i > 0 && x(tick.date) - x(ticks[i-1].date) >= 56 && x(ticks.at(-1).date) - x(tick.date) >= 56))
     : overviewTimeTicks(start,end,Math.max(2,Math.floor((right-left)/85)));
@@ -58,7 +64,7 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
   const zero = y(0);
   const color = value => value < 0 ? 'var(--av-profit-loss)' : 'var(--accent)';
   const marks = points.map(([label, value, day, partial]) => ({
-    label, value, partial, x: x(Date.parse(day)), y: y(value)
+    label, value, partial, x: x(coordinate(day)), y: y(value)
   }));
   const curveMarks = marks.filter(mark => !mark.partial);
   const first = curveMarks[0];
@@ -84,7 +90,7 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
       '" stop-opacity="0"/></linearGradient></defs><g clip-path="url(#' + key + ')"><path d="' +
       area + '" fill="url(#' + key + '-fill)"/><path d="' + curve + '" fill="none" stroke="' + shade + '" stroke-width="1.5" vector-effect="non-scaling-stroke"/></g>';
   }).join('');
-  const showArrival = start <= arrivalDate && arrivalDate <= end;
+  const showArrival = !options.ordinal && start <= arrivalDate && arrivalDate <= end;
   let management = '';
   if (showArrival) {
     const arrivalX = x(arrivalDate);
@@ -109,7 +115,7 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
   const rateLow = Math.min(0, Math.floor(Math.min(...secondaryValues) / 4) * 4);
   const rateHigh = Math.max(4, Math.ceil(Math.max(...secondaryValues) / 4) * 4);
   const secondaryY = options.rightAxis ? value => 28 + (rateHigh - value) / (rateHigh - rateLow) * 148 : y;
-  const secondMarks = secondary.map(([label, value, day]) => ({label, value, x:x(Date.parse(day)), y:secondaryY(value)}));
+  const secondMarks = secondary.map(([label, value, day]) => ({label, value, x:x(coordinate(day)), y:secondaryY(value)}));
   const secondaryColor = options.rightAxis ? 'var(--av-management)' : 'var(--muted)';
   const rightTicks = options.rightAxis && secondMarks.length ? Array.from({length:5}, (_, i) => rateLow + (rateHigh-rateLow)*i/4)
     .map(value => `<text x="${right + 5}" y="${secondaryY(value) + 4}" fill="${secondaryColor}">${safe(fmt(value))}%</text>`).join('') : '';
@@ -117,10 +123,10 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
   const secondPath = smoothCurve(branch ? [branch, ...secondMarks] : secondMarks);
   const secondaryLine = secondMarks.length ? `<path class="av-secondary-line" d="${secondPath}" fill="none" stroke="${secondaryColor}" stroke-width="1.5" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>` +
     secondMarks.map((mark,i) => `<circle class="av-secondary-point" r="3" fill="${secondaryColor}" cx="${mark.x}" cy="${mark.y}"><title>${safe(mark.label + ': ' + fmt(mark.value) + (options.rightAxis ? '%' : ''))}</title></circle>` +
-      (options.rightAxis && width < 600 ? '' : `<text class="av-kpi-point-label" x="${mark.x + (i % 2 ? 7 : -7)}" y="${Math.min(175, mark.y + 17)}" text-anchor="${i % 2 ? 'start' : 'end'}" fill="${secondaryColor}">${safe(fmt(mark.value))}${options.rightAxis ? '%' : ''}</text>`)).join('') : '';
+      (options.rightAxis && (width < 600 || (options.ordinal && i !== secondMarks.length - 1)) ? '' : `<text class="av-kpi-point-label" x="${mark.x + (i % 2 ? 7 : -7)}" y="${Math.min(175, mark.y + 17)}" text-anchor="${i % 2 ? 'start' : 'end'}" fill="${secondaryColor}">${safe(fmt(mark.value))}${options.rightAxis ? '%' : ''}</text>`)).join('') : '';
   const coverage = (options.contractDates || []).map(([label,count,day]) => `<path class="contract-coverage-tick" d="M${x(Date.parse(day))} 177v6" stroke="var(--muted)" stroke-width="1.5"><title>${safe(label + ' · договоров: ' + count)}</title></path>`).join('');
   return '<svg class="av-profit-chart" viewBox="0 0 ' + width + ' 202" role="img" aria-label="' +
-    safe(unit + '. ' + marks.map(mark => mark.label + ': ' + format(mark.value)).join('. ') + (showArrival ? '. ' + arrivalLabel : '')) + '">' +
+    safe(unit + '. ' + marks.map(mark => mark.label + ': ' + format(mark.value)).join('. ') + (options.ordinal ? '. Рентабельность: ' + secondMarks.map(mark => mark.label + ': ' + fmt(mark.value) + '%').join('. ') : '') + (showArrival ? '. ' + arrivalLabel : '')) + '">' +
     ticks.map(value => '<path d="M' + left + ' ' + y(value) + 'H' + right + '" class="av-kpi-gridline"/><text class="' + (Math.abs(Math.round(value/tickStep))%2 ? 'av-kpi-minor-tick' : '') + '" x="42" y="' +
       (y(value) + 4) + '" text-anchor="end">' + safe(fmt(value)) + '</text>').join('') + traces + management +
     '<path d="M' + left + ' 28V176 M' + left + ' ' + zero + 'H' + right + '" class="av-profit-axis"/>' + secondaryLine + rightTicks + coverage +
@@ -184,8 +190,8 @@ function summaryCard({id, icon, label, route, unit, points, note = '', value, se
     overviewChart(id, points, label + ', ' + unit, fmt, secondary, options), '', '');
 }
 
-function statusCard(icon, label, value, note, route) {
-  return `<article class="av-metric av-status-card">
+function statusCard(icon, label, value, note, route, compact = false) {
+  return `<article class="av-metric av-status-card${compact ? ' av-status-compact' : ''}">
     <a class="av-label av-kpi-link" href="#${route}">${window.avIcon(icon)}${safe(label)}</a>
     <div class="av-number">${safe(value)}</div><div class="av-muted">${safe(note)}</div>
   </article>`;
@@ -233,14 +239,16 @@ function salesCard(contracts) {
     note:'По датам подписания · выгрузка покупателей', options:{quarterTicks:true, integerAxis:true}});
 }
 
-function marginCard(contracts) {
-  const points = seriesPoints('dealPrices', cashUnit);
-  const secondary = seriesPoints('dealRates', '%');
-  const count = contracts.reduce((total, [,value]) => total + value, 0);
+function marginCard() {
+  const snapshot = window.AVERA_OVERVIEW_SERIES.contractAnalysisSnapshot;
+  const rows = snapshot?.positions || [];
+  const points = rows.map(([price], i) => ['Позиция №' + (i + 1), price / 1e6, i + 1]);
+  const secondary = rows.map(([, rate], i) => ['Позиция №' + (i + 1), rate * 100, i + 1]);
+  const date = rows.length ? new Intl.DateTimeFormat('ru-RU',{timeZone:'UTC'}).format(new Date(snapshot.asOf)) : '';
   return summaryCard({id:'deal-margin', icon:'sales', label:'Стоимость и рентабельность договоров', route:'sales',
-    unit:cashUnit, points, secondary, options:{rightAxis:true, contractDates:contracts},
-    value:fmt(count) + ' договоров в выгрузке · ' + fmt(points.length) + ' предварительных совпадений',
-    note:null});
+    unit:cashUnit, points, secondary, options:{rightAxis:true, ordinal:true},
+    value:rows.length ? fmt(rows.length) + ' позиций · ' + fmt(snapshot.weightedRate * 100) + '% взвешенная рентабельность' : 'НД',
+    note:date ? 'Анализ контрактов на ' + date + ' · порядок позиций в файле' : 'Нет данных анализа контрактов'});
 }
 
 function balanceCard() {
@@ -299,13 +307,12 @@ window.ownerOverview = function () {
       statusVisible ? 'Оперативный срез на 09.11.2026 · сумма и дата подписания уточняются' : 'Нет среза в выбранном периоде','sales')]],
     ['Исполнение заказа',[statusCard('sales','Заказ в работе',statusVisible ? '1 крупный заказ' : 'НД',
       statusVisible ? 'Оперативный срез на 09.11.2026 · ближайшая отгрузка и готовность КД уточняются' : 'Нет среза в выбранном периоде','production')]],
-    ['Маржа',[marginCard(contracts)]],
+    ['Маржа',[marginCard()]],
     ['Деньги и обязательства',[amountCard('cash','Остаток денег по ДДС','Остаток по месячной выгрузке ДДС'),balanceCard(),loanCard()]],
     ['Продуктовый портфель',[productsCard()]],
-    ['Команда',[teamCard()]],
-    ['Что изменилось с 26 октября',[statusCard('people','Штатная расстановка · 16.10 → 06.11',
+    ['Команда',[teamCard(),statusCard('people','Штатная расстановка · 16.10 → 06.11',
       dateInRange('2026-11-06') ? '+7 занятых ставок' : 'НД',
-      dateInRange('2026-11-06') ? '58,46 → 65,46 ставки. Решение и его вклад в изменение пока не подтверждены' : 'Нет среза в выбранном периоде','people')]]
+      dateInRange('2026-11-06') ? '58,46 → 65,46 ставки. Решение и его вклад в изменение пока не подтверждены' : 'Нет среза в выбранном периоде','people',true)]]
   ];
   return controls + '<section class="av-grid av-owner-kpis" aria-label="Показатели компании">' +
     sections.map(([name, cards], i) => '<h2 class="av-overview-section">' + (i+1) + '. ' + safe(name) + '</h2>' + cards.join('')).join('') + '</section>';

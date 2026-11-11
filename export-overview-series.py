@@ -1,7 +1,7 @@
 """Export only dashboard aggregates from the verified Excel sheet."""
 import argparse
 import calendar
-from collections import Counter, defaultdict
+from collections import Counter
 import datetime
 import json
 import math
@@ -34,11 +34,6 @@ def point(day, value, caption=None, partial=False):
     return [day.strftime('%Y-%m-%d'), value, caption or day.strftime('%d.%m.%Y'), '', partial]
 
 
-def customer_key(name):
-    name = re.sub(r'\b(?:ооо|ао|ип|пао)\b', '', str(name).lower())
-    return re.sub(r'[^а-яёa-z0-9]', '', name)
-
-
 def add_summary_series(workbook, data):
     data['receivables'] = [point(day, amount) for day, _, group, label, _, amount, *_ in
                            workbook['Отчётность'].iter_rows(min_row=2, values_only=True)
@@ -64,26 +59,6 @@ def add_summary_series(workbook, data):
     snapshot = max((row[0] for row in deals), default=None)
     deals = [row for row in deals if row[0] == snapshot]
     data['contractDates'] = [point(day, count) for day, count in sorted(Counter(row[3] for row in deals).items())]
-    by_price = defaultdict(list)
-    for row in deals:
-        if isinstance(row[7], (int, float)) and row[7] > 0:
-            by_price[customer_key(row[1]), round(row[7], 2)].append(row[3])
-    analyses = [row for row in workbook['Рентабельность'].iter_rows(min_row=2, values_only=True)
-                if row[0] and isinstance(row[8], (int, float)) and isinstance(row[11], (int, float))]
-    latest = max((row[0] for row in analyses), default=None)
-    candidates = defaultdict(list)
-    for row in analyses:
-        if row[0] == latest:
-            candidates[customer_key(row[1]), round(row[8], 2)].append(row)
-    pairs = []
-    for key, rows in candidates.items():
-        days = by_price[key]
-        if len(rows) == len(days) == 1:
-            pairs.append((days[0], rows[0][8], rows[0][11]))
-    pairs.sort()
-    data['dealPrices'] = [point(day, price) for day, price, _ in pairs]
-    data['dealRates'] = [point(day, rate) for day, _, rate in pairs]
-
     data['headcount'] = []
     for _, label, day, _, _, _, _, detail in workbook['Ряды дашборда'].iter_rows(min_row=2, max_col=8, values_only=True):
         count = re.search(r'Средняя численность:\s*([\d,]+)', str(detail)) if label == 'Текучесть' else None
@@ -91,7 +66,40 @@ def add_summary_series(workbook, data):
             data['headcount'].append(point(day, float(count[1].replace(',', '.')), 'Средняя численность за ' + str(day.year)))
 
 
-def export(source, destination):
+def read_contract_analysis(source, as_of):
+    # The source is a position-by-position snapshot, without signing dates.
+    workbook = load_workbook(source, data_only=True, read_only=True)
+    try:
+        rows = workbook.active.iter_rows(max_col=9, values_only=True)
+        header = next(rows)
+        if not ('в т.ч. НДС' in str(header[5]) and 'без НДС' in str(header[6])
+                and 'Рентабельность' in str(header[8])):
+            raise ValueError('Не распознаны колонки файла анализа контрактов')
+        points, net_prices, profits = [], [], []
+        for row in rows:
+            if row[1] == 'Итого':
+                totals = row[5:8]
+                break
+            gross, net, profit, rate = row[5:9]
+            if gross is None:
+                continue
+            if (not all(isinstance(x, (int, float)) and math.isfinite(x) for x in (gross, net, profit, rate))
+                    or gross <= 0 or net <= 0 or not math.isclose(rate, profit / net, abs_tol=1e-9)):
+                raise ValueError(f'Некорректные цена или рентабельность, позиция {len(points) + 1}')
+            points.append([gross, rate])
+            net_prices.append(net)
+            profits.append(profit)
+        else:
+            raise ValueError('Отсутствует итог в файле анализа контрактов')
+        sums = (sum(gross for gross, _ in points), sum(net_prices), sum(profits))
+        if not points or not all(math.isclose(total, actual, rel_tol=0, abs_tol=.01) for total, actual in zip(totals, sums)):
+            raise ValueError('Итог анализа контрактов не сходится с позициями')
+        return {'asOf': as_of.isoformat(), 'weightedRate': sums[2] / sums[1], 'positions': points}
+    finally:
+        workbook.close()
+
+
+def export(source, destination, contract_analysis, analysis_date):
     workbook = load_workbook(source, data_only=True, read_only=True)
     rows = workbook["Ряды дашборда"].iter_rows(min_row=2, max_col=8, values_only=True)
     data = {key: [] for key in SERIES.values()}
@@ -119,12 +127,15 @@ def export(source, destination):
         if not data[key]:
             raise ValueError(f"Отсутствует обязательный ряд: {key}")
     add_summary_series(workbook, data)
+    data['contractAnalysisSnapshot'] = read_contract_analysis(contract_analysis, analysis_date)
     destination.write_text("window.AVERA_OVERVIEW_SERIES = " + json.dumps(data, ensure_ascii=False, indent=2) + ";\n", encoding="utf-8")
-    return sum(map(len, data.values()))
+    return sum(len(points) for points in data.values() if isinstance(points, list)) + len(data['contractAnalysisSnapshot']['positions'])
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("workbook", type=Path)
+    parser.add_argument("--contract-analysis", type=Path, required=True)
+    parser.add_argument("--analysis-date", type=datetime.date.fromisoformat, required=True)
     parser.add_argument("--output", type=Path, default=Path(__file__).with_name("overview-series.js"))
     args = parser.parse_args()
-    print(f"Exported {export(args.workbook, args.output)} aggregate points")
+    print(f"Exported {export(args.workbook, args.output, args.contract_analysis, args.analysis_date)} aggregate points")
