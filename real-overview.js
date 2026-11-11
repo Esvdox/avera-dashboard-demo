@@ -208,11 +208,6 @@ function statusCard(icon, label, value, note, route) {
   </article>`;
 }
 
-function amountCard(id, label, note) {
-  const points = seriesPoints(id, cashUnit);
-  return summaryCard({id, icon:'wallet', label, route:'finance', unit:cashUnit, points, note});
-}
-
 function cashMovementCard() {
   const points = seriesPoints('netCashFlow', cashUnit);
   const balances = seriesPoints('cash', cashUnit);
@@ -272,7 +267,7 @@ function marginCard() {
   const secondary = rows.map(([, rate], i) => ['Позиция №' + (i + 1), rate * 100, i + 1]);
   return summaryCard({id:'deal-margin', icon:'sales', label:'Стоимость и рентабельность договоров', route:'sales',
     unit:cashUnit, points, secondary, options:{rightAxis:true, ordinal:true},
-    value:rows.length ? fmt(rows.length) + ' позиций · ' + fmt(snapshot.weightedRate * 100) + '% взвешенная рентабельность' : 'НД',
+    value:rows.length ? fmt(snapshot.weightedRate * 100) + '% взвешенная рентабельность' : 'НД',
     note:rows.length ? null : 'Нет данных анализа контрактов'});
 }
 
@@ -338,7 +333,7 @@ window.ownerOverview = function () {
     ['Исполнение заказа',[statusCard('sales','Заказ в работе',statusVisible ? '1 крупный заказ' : 'НД',
       statusVisible ? 'Оперативный срез на 09.11.2026 · ближайшая отгрузка и готовность КД уточняются' : 'Нет среза в выбранном периоде','production')]],
     ['Маржа',[marginCard()]],
-    ['Деньги и обязательства',[amountCard('cash','Остаток денег по ДДС',null),balanceCard(),loanCard()]],
+    ['Деньги и обязательства',[balanceCard(),loanCard()]],
     ['Продуктовый портфель',[productsCard()]],
     ['Команда',[teamCard()]]
   ];
