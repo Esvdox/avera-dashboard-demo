@@ -42,13 +42,16 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
   const width = $('#content').clientWidth - 34;
   const left = 56, right = width - (options.rightAxis ? 52 : 26);
   const x = day => end === start ? (left + right) / 2 : left + 28 + (right - left - 56) * (day - start) / (end - start);
-  const ticksX = overviewTimeTicks(start,end,Math.max(2,Math.floor((right-left)/85)));
+  const ticksX = options.quarterTicks ? points.map(([label,,day])=>({date:Date.parse(day),label}))
+    .filter((tick, i, ticks) => i === ticks.length - 1 || (i === 0 && x(ticks.at(-1).date) - x(tick.date) >= 56) ||
+      (i > 0 && x(tick.date) - x(ticks[i-1].date) >= 56 && x(ticks.at(-1).date) - x(tick.date) >= 56))
+    : overviewTimeTicks(start,end,Math.max(2,Math.floor((right-left)/85)));
   const values = (options.rightAxis ? points : [...points, ...secondary]).map(([, value]) => value);
   const minimum = Math.min(0, ...values);
   const maximum = Math.max(0, ...values);
   const span = maximum - minimum || 1;
   const step = 10 ** Math.floor(Math.log10(span / 4));
-  const tickStep = Math.ceil(span / (4 * step)) * step;
+  const tickStep = Math.max(options.integerAxis ? 1 : 0, Math.ceil(span / (4 * step)) * step);
   const low = Math.floor(minimum / tickStep) * tickStep;
   const high = Math.max(tickStep, Math.ceil(maximum / tickStep) * tickStep);
   const y = value => 28 + (high - value) / (high - low) * 148;
@@ -200,11 +203,34 @@ function financeCard(id, label, icon) {
   return summaryCard({id, icon, label, route:'finance', unit:cashUnit, points, note});
 }
 
+function quarterOf(day) {
+  const date = new Date(day);
+  return date.getUTCFullYear() * 4 + Math.floor(date.getUTCMonth() / 3);
+}
+
 function salesCard(contracts) {
-  const count = contracts.reduce((total, [,value]) => total + value, 0);
-  return summaryCard({id:'contracts', icon:'sales', label:'Договоры по датам подписания', route:'sales', unit:'шт.',
-    points:contracts, value:contracts.length ? fmt(count) + ' шт.' : 'НД',
-    note:'Даты договоров из выгрузки покупателей'});
+  const quarterly = new Map();
+  let count = 0;
+  for (const [,value,day] of contracts) {
+    const quarter = quarterOf(day);
+    quarterly.set(quarter, (quarterly.get(quarter) || 0) + value);
+    count += value;
+  }
+  const source = window.AVERA_OVERVIEW_SERIES.contractDates;
+  const points = [];
+  if (source.length) {
+    const first = Math.max(quarterOf(source[0][0]), quarterOf(overviewRange.from));
+    const last = Math.min(quarterOf(source.at(-1)[0]), quarterOf(overviewRange.to));
+    for (let q = first; q <= last; q++) {
+      const year = Math.floor(q / 4), index = q % 4;
+      const end = new Date(Date.UTC(year, (index + 1) * 3, 0)).toISOString().slice(0, 10);
+      const label = ['I','II','III','IV'][index] + ' кв. ' + String(year).slice(-2);
+      points.push([label, quarterly.get(q) || 0, end < overviewRange.to ? end : overviewRange.to]);
+    }
+  }
+  return summaryCard({id:'contracts', icon:'sales', label:'Договоры по кварталам', route:'sales', unit:'шт.',
+    points, value:points.length ? fmt(count) + ' шт.' : 'НД',
+    note:'По датам подписания · выгрузка покупателей', options:{quarterTicks:true, integerAxis:true}});
 }
 
 function marginCard(contracts) {
