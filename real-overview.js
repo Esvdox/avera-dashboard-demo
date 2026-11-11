@@ -304,9 +304,8 @@ function salesCard(contracts) {
     const delta = lastCount - firstCount;
     const tone = delta === 0 ? '' : ' av-kpi-delta-' + (delta > 0 ? 'good' : 'bad');
     const sign = delta === 0 ? '' : delta > 0 ? '+' : '−';
-    const amount = sign + fmt(Math.abs(delta)) + ' шт.';
-    const comparison = delta === 0 ? 'без изменений' : fmt(firstCount) + ' → ' + fmt(lastCount) + ' за квартал';
-    change = `<span class="av-kpi-delta${tone}" title="${safe(firstLabel + ' → ' + lastLabel)}">${safe(amount + ' · ' + comparison)}</span>`;
+    const amount = sign + fmt(Math.abs(delta));
+    change = `<span class="av-kpi-delta${tone}" title="${safe(firstLabel + ' → ' + lastLabel)}">${safe(amount)}</span>`;
   }
   return summaryCard({id:'contracts', icon:'sales', label:'Договоры по кварталам', route:'sales', unit:'шт.',
     points, value:points.length ? fmt(count) + ' шт.' : 'НД', change,
