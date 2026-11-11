@@ -208,21 +208,41 @@ function statusCard(icon, label, value, note, route) {
   </article>`;
 }
 
+function cashDelta(points, subject, periodLabel) {
+  if (points.length < 2) return '';
+  const first = points[0], last = points.at(-1);
+  const delta = last[1] - first[1];
+  const amount = fmt(Math.abs(delta));
+  const period = periodLabel(first) + ' → ' + periodLabel(last);
+  if (amount === '0') {
+    return '<span class="av-kpi-delta" title="' + safe(period) + '">0 млн ₽ · без изменений</span>';
+  }
+  const increased = delta > 0;
+  const tone = increased ? 'good' : 'bad';
+  const change = (increased ? '+' : '−') + amount + ' ' + cashUnit + ' · ' +
+    subject + (increased ? ' вырос' : ' снизился');
+  return '<span class="av-kpi-delta av-kpi-delta-' + tone + '" title="' + safe(period) + '">' +
+    safe(change) + '</span>';
+}
+
 function cashMovementCard() {
   const points = seriesPoints('netCashFlow', cashUnit);
   const balances = seriesPoints('cash', cashUnit);
-  const last = points.at(-1), balance = balances.at(-1), previous = points.at(-2);
-  const delta = previous && last ? last[1] - previous[1] : 0;
-  const change = delta === 0 ? '' : '<span class="av-kpi-delta av-kpi-delta-' + (delta > 0 ? 'good' : 'bad') + '">' +
-    safe((delta > 0 ? '+' : '−') + fmt(Math.abs(delta)) + ' ' + cashUnit + ' · ' +
-      (delta > 0 ? 'поток вырос' : 'поток снизился')) + '</span>';
+  const last = points.at(-1), balance = balances.at(-1);
+  const change = cashDelta(points, 'поток', ([period]) => period);
+  const balanceChange = cashDelta(balances, 'остаток', ([,,day]) => day.split('-').reverse().join('.'));
+  const balanceKpi = balance ? `<div class="av-cash-balance-kpi">
+    <div class="av-label">Остаток на конец месяца</div>
+    <div class="av-number av-kpi-values"><span>${safe(fmt(balance[1]) + ' ' + cashUnit)}</span>${balanceChange}</div>
+  </div>` : '';
+  const legend = last || balance ? '<div class="av-cash-legend">' +
+    (last ? '<span><i aria-hidden="true"></i>Чистый денежный поток</span>' : '') +
+    (balance ? '<span><i class="av-cash-dash" aria-hidden="true"></i>Остаток на конец месяца</span>' : '') +
+    '</div>' : '';
   const label = 'Чистый денежный поток и остатки на счетах';
-  const legend = last ? '<div class="av-cash-legend"><span><i aria-hidden="true"></i>Чистый денежный поток</span>' +
-    (balance ? '<span><i class="av-cash-dash" aria-hidden="true"></i>Остаток на конец месяца <strong>' +
-      safe(fmt(balance[1]) + ' ' + cashUnit) + '</strong></span>' : '') + '</div>' : '';
   return card('wallet', label, last ? fmt(last[1]) + ' ' + cashUnit : 'НД', null, 'finance',
     overviewChart('netCashFlow', points, label + ', ' + cashUnit, fmt, balances,
-      {compactSecondary:true, secondaryColor:'var(--av-cash-balance)'}) + legend, change, '');
+      {compactSecondary:true, secondaryColor:'var(--av-cash-balance)'}) + legend, change, balanceKpi);
 }
 
 function financeCard(id, label, icon) {

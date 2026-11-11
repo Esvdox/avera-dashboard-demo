@@ -181,4 +181,4 @@ body.dark{--av-cash-balance:#b5c9e2}
 .av-cash-legend span{display:inline-flex;align-items:center;gap:6px}
 .av-cash-legend i{width:18px;border-top:1.5px solid var(--accent)}
 .av-cash-legend i.av-cash-dash{border-top-style:dashed;border-color:var(--av-cash-balance)}
-.av-cash-legend strong{color:var(--text)}
+.av-cash-balance-kpi{margin-top:8px}
