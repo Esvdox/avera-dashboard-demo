@@ -12,7 +12,8 @@ function card(icon, label, value, note, route, chart, change, controls) {
 const overviewRange = {from: '2024-01-01', to: new Intl.DateTimeFormat('sv-SE', {timeZone:'Europe/Moscow'}).format(new Date())};
 const arrivalDay = '2026-10-26';
 const arrivalDate = Date.parse(arrivalDay);
-const arrivalLabel = 'Начало периода управления · 26.10.2026';
+const arrivalDateLabel = arrivalDay.split('-').reverse().join('.');
+const arrivalLabel = 'Начало периода управления · ' + arrivalDateLabel;
 const missing = '<p class="av-muted">Нет данных за выбранный период</p>';
 
 function overviewTimeTicks(start, end, count) {
@@ -320,9 +321,13 @@ function marginCard() {
   const secondary = rows.map(([, rate], i) => ['Позиция №' + (i + 1), rate * 100, i + 1]);
   const label = 'Стоимость и рентабельность договоров';
   const value = 'Взвешенная рентабельность — ' + (rows.length ? fmt(snapshot.weightedRate * 100) + '%' : 'НД');
+  const arrivalSnapshot = snapshot?.asOf === arrivalDay
+    ? `<span><i class="av-arrival-key" aria-hidden="true"></i>Срез на дату прихода · ${arrivalDateLabel}</span>`
+    : '';
   const legend = rows.length ? `<div class="av-chart-legend av-margin-legend">
     <span><i aria-hidden="true"></i>Стоимость с НДС, млн ₽</span>
     <span><i class="av-margin-dash" aria-hidden="true"></i>Рентабельность, %</span>
+    ${arrivalSnapshot}
   </div>` : '';
   return card('sales', label, value, null, 'sales',
     overviewChart('deal-margin', points, label + ', ' + cashUnit, fmt, secondary,
