@@ -27,6 +27,26 @@
 #avera-owner .cmp-date-field input::-webkit-calendar-picker-indicator{cursor:pointer}
 @media(pointer:coarse){#avera-owner .cmp-date-field input{min-height:40px;font-size:16px}}
 #avera-owner.dark .cmp-date-field{color-scheme:dark}
+#avera-owner .cmp-date-input{min-width:0}
+#avera-owner .cmp-date-value{display:none}
+@media(max-width:760px){
+  #avera-owner .cmp-dates{width:100%}
+}
+@media(max-width:760px) and (pointer:coarse){
+  #avera-owner .cmp-date-input{position:relative;overflow:hidden;border-radius:var(--radius-input)}
+  #avera-owner .cmp-date-input:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+  #avera-owner .cmp-date-input .cmp-date-value{
+    display:grid;place-items:center;min-height:40px;padding:4px;white-space:nowrap;
+    color:var(--text);background:var(--input-background);border:1px solid var(--input-border);
+    border-radius:inherit;font-variant-numeric:tabular-nums;
+  }
+  #avera-owner .cmp-date-input input{
+    position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;opacity:0;
+  }
+  #avera-owner .cmp-date-input input::-webkit-calendar-picker-indicator{
+    position:absolute;inset:0;width:auto;height:auto;margin:0;padding:0;
+  }
+}
 #avera-owner .cmp-trend{font-weight:700}
 #avera-owner .cmp-trend-good{color:var(--good)}
 #avera-owner .cmp-trend-bad{color:var(--danger)}

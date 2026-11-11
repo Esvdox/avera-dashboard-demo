@@ -340,8 +340,17 @@ function teamCard() {
 window.ownerOverview = function () {
   const {from, to} = overviewRange;
   const controls = '<div class="panel cmp-controls" aria-label="Единый период обзора"><div class="cmp-dates">' +
-    [['from','От'],['to','До']].map(([key,label])=>'<div class="cmp-date-field"><label for="av-overview-'+key+'">'+label+
-      '</label><input type="date" id="av-overview-'+key+'" data-overview-date="'+key+'" value="'+safe(overviewRange[key])+'"></div>').join('') + '</div></div>';
+    [['from','От'],['to','До']].map(([key,label]) => {
+      const value = overviewRange[key];
+      const shortDate = value ? value.split('-').reverse().join('.') : 'дд.мм.гггг';
+      return `<div class="cmp-date-field">
+        <label for="av-overview-${key}">${label}</label>
+        <div class="cmp-date-input">
+          <span class="cmp-date-value" aria-hidden="true">${safe(shortDate)}</span>
+          <input type="date" id="av-overview-${key}" data-overview-date="${key}" value="${safe(value)}">
+        </div>
+      </div>`;
+    }).join('') + '</div></div>';
   if (!from || !to || from > to) return controls + '<p class="av-muted">Укажите корректный диапазон дат.</p>';
   const contracts = seriesPoints('contractDates', 'шт.');
   const statusVisible = dateInRange('2026-11-09');
