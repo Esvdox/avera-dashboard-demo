@@ -4,7 +4,7 @@
 function card(icon, label, value, note, route, chart, change, controls) {
   return `<article class="av-metric">
     <a class="av-label av-kpi-link" href="#${route}">${window.avIcon(icon)}${safe(label)}</a>
-    <div class="av-number av-kpi-values"><span>${safe(value)}</span>${change}</div><div class="av-muted">${safe(note)}</div>
+    <div class="av-number av-kpi-values"><span>${safe(value)}</span>${change}</div>${note === null ? '' : `<div class="av-muted">${safe(note)}</div>`}
     ${controls}<div class="av-kpi-chart">${chart}</div>
   </article>`;
 }
@@ -176,7 +176,7 @@ function seriesPoints(key, unit) {
 function summaryCard({id, icon, label, route, unit, points, note = '', value, secondary = [], options}) {
   const last = points.at(-1);
   const displayed = value ?? (last ? fmt(last[1]) + ' ' + unit : 'НД');
-  const description = note || (last ? last[0] : 'Нет среза в выбранном периоде');
+  const description = note === null ? null : note || (last ? last[0] : 'Нет среза в выбранном периоде');
   return card(icon, label, displayed, description, route,
     overviewChart(id, points, label + ', ' + unit, fmt, secondary, options), '', '');
 }
@@ -214,7 +214,7 @@ function marginCard(contracts) {
   return summaryCard({id:'deal-margin', icon:'sales', label:'Стоимость и рентабельность договоров', route:'sales',
     unit:cashUnit, points, secondary, options:{rightAxis:true, contractDates:contracts},
     value:fmt(count) + ' договоров в выгрузке · ' + fmt(points.length) + ' предварительных совпадений',
-    note:'Сплошная — цена с НДС, млн ₽ (слева). Пунктир — рентабельность, % (справа). Штрихи — даты договоров.'});
+    note:null});
 }
 
 function balanceCard() {
