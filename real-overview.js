@@ -264,19 +264,33 @@ function salesCard(contracts) {
     count += value;
   }
   const source = window.AVERA_OVERVIEW_SERIES.contractDates;
-  const points = [];
+  const points = [], completeQuarters = [];
   if (source.length) {
     const first = Math.max(quarterOf(source[0][0]), quarterOf(overviewRange.from));
     const last = Math.min(quarterOf(source.at(-1)[0]), quarterOf(overviewRange.to));
     for (let q = first; q <= last; q++) {
       const year = Math.floor(q / 4), index = q % 4;
+      const start = new Date(Date.UTC(year, index * 3, 1)).toISOString().slice(0, 10);
       const end = new Date(Date.UTC(year, (index + 1) * 3, 0)).toISOString().slice(0, 10);
       const label = ['I','II','III','IV'][index] + ' кв. ' + String(year).slice(-2);
-      points.push([label, quarterly.get(q) || 0, end < overviewRange.to ? end : overviewRange.to]);
+      const point = [label, quarterly.get(q) || 0, end < overviewRange.to ? end : overviewRange.to];
+      points.push(point);
+      if (dateInRange(start) && dateInRange(end)) completeQuarters.push(point);
     }
   }
+  let change = '';
+  if (completeQuarters.length >= 2) {
+    const [firstLabel, firstCount] = completeQuarters[0];
+    const [lastLabel, lastCount] = completeQuarters.at(-1);
+    const delta = lastCount - firstCount;
+    const tone = delta === 0 ? '' : ' av-kpi-delta-' + (delta > 0 ? 'good' : 'bad');
+    const sign = delta === 0 ? '' : delta > 0 ? '+' : '−';
+    const amount = sign + fmt(Math.abs(delta)) + ' шт.';
+    const comparison = delta === 0 ? 'без изменений' : fmt(firstCount) + ' → ' + fmt(lastCount) + ' за квартал';
+    change = `<span class="av-kpi-delta${tone}" title="${safe(firstLabel + ' → ' + lastLabel)}">${safe(amount + ' · ' + comparison)}</span>`;
+  }
   return summaryCard({id:'contracts', icon:'sales', label:'Договоры по кварталам', route:'sales', unit:'шт.',
-    points, value:points.length ? fmt(count) + ' шт.' : 'НД',
+    points, value:points.length ? fmt(count) + ' шт.' : 'НД', change,
     note:null, options:{quarterTicks:true, integerAxis:true}});
 }
 
