@@ -222,20 +222,17 @@ function cashMovementCard() {
     safe((delta > 0 ? '+' : '−') + fmt(Math.abs(delta)) + ' ' + cashUnit + ' · ' +
       (delta > 0 ? 'поток вырос' : 'поток снизился')) + '</span>';
   const label = 'Чистый денежный поток и остатки на счетах';
-  const note = last ? last[0] + ' · по ДДС' : 'Нет среза в выбранном периоде';
   const legend = last ? '<div class="av-cash-legend"><span><i aria-hidden="true"></i>Чистый денежный поток</span>' +
     (balance ? '<span><i class="av-cash-dash" aria-hidden="true"></i>Остаток на конец месяца <strong>' +
       safe(fmt(balance[1]) + ' ' + cashUnit) + '</strong></span>' : '') + '</div>' : '';
-  return card('wallet', label, last ? fmt(last[1]) + ' ' + cashUnit : 'НД', note, 'finance',
+  return card('wallet', label, last ? fmt(last[1]) + ' ' + cashUnit : 'НД', null, 'finance',
     overviewChart('netCashFlow', points, label + ', ' + cashUnit, fmt, balances,
-      {compactSecondary:true, secondaryColor:'var(--av-cash-balance)'}), change, legend);
+      {compactSecondary:true, secondaryColor:'var(--av-cash-balance)'}) + legend, change, '');
 }
 
 function financeCard(id, label, icon) {
   const points = seriesPoints(id, cashUnit);
-  const periods = points.map(([period]) => period).join(' → ');
-  const note = periods ? periods + ' · годовые и девятимесячные срезы ОФР' : '';
-  return summaryCard({id, icon, label, route:'finance', unit:cashUnit, points, note});
+  return summaryCard({id, icon, label, route:'finance', unit:cashUnit, points, note:null});
 }
 
 function quarterOf(day) {
@@ -265,7 +262,7 @@ function salesCard(contracts) {
   }
   return summaryCard({id:'contracts', icon:'sales', label:'Договоры по кварталам', route:'sales', unit:'шт.',
     points, value:points.length ? fmt(count) + ' шт.' : 'НД',
-    note:'По датам подписания · выгрузка покупателей', options:{quarterTicks:true, integerAxis:true}});
+    note:null, options:{quarterTicks:true, integerAxis:true}});
 }
 
 function marginCard() {
@@ -273,11 +270,10 @@ function marginCard() {
   const rows = snapshot?.positions || [];
   const points = rows.map(([price], i) => ['Позиция №' + (i + 1), price / 1e6, i + 1]);
   const secondary = rows.map(([, rate], i) => ['Позиция №' + (i + 1), rate * 100, i + 1]);
-  const date = rows.length ? new Intl.DateTimeFormat('ru-RU',{timeZone:'UTC'}).format(new Date(snapshot.asOf)) : '';
   return summaryCard({id:'deal-margin', icon:'sales', label:'Стоимость и рентабельность договоров', route:'sales',
     unit:cashUnit, points, secondary, options:{rightAxis:true, ordinal:true},
     value:rows.length ? fmt(rows.length) + ' позиций · ' + fmt(snapshot.weightedRate * 100) + '% взвешенная рентабельность' : 'НД',
-    note:date ? 'Анализ контрактов на ' + date + ' · порядок позиций в файле' : 'Нет данных анализа контрактов'});
+    note:rows.length ? null : 'Нет данных анализа контрактов'});
 }
 
 function balanceCard() {
@@ -342,7 +338,7 @@ window.ownerOverview = function () {
     ['Исполнение заказа',[statusCard('sales','Заказ в работе',statusVisible ? '1 крупный заказ' : 'НД',
       statusVisible ? 'Оперативный срез на 09.11.2026 · ближайшая отгрузка и готовность КД уточняются' : 'Нет среза в выбранном периоде','production')]],
     ['Маржа',[marginCard()]],
-    ['Деньги и обязательства',[amountCard('cash','Остаток денег по ДДС','Остаток по месячной выгрузке ДДС'),balanceCard(),loanCard()]],
+    ['Деньги и обязательства',[amountCard('cash','Остаток денег по ДДС',null),balanceCard(),loanCard()]],
     ['Продуктовый портфель',[productsCard()]],
     ['Команда',[teamCard()]]
   ];
