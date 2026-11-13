@@ -94,7 +94,7 @@ function wires(){
 const mode=new URLSearchParams(location.search).get('view');
 const controls=document.createElement('nav');controls.className='draft-controls';main.prepend(controls);
 for(const [key,label] of [['','Основная штатка'],['platonov','Предложенная штатка'],['compare','Смешанная']]){
-  const link=controls.appendChild(document.createElement('a'));link.href=key?'?view='+key:location.href.split('?')[0];
+  const link=controls.appendChild(document.createElement('a'));link.href='?ui=relief2'+(key?'&view='+key:'');
   link.textContent=label;if((mode||'')===key)link.setAttribute('aria-current','page');
 }
 function element(parent,tag,value){
