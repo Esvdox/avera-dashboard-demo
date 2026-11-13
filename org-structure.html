@@ -98,14 +98,12 @@ function card(item, icon) {
     assignmentInputs.push({slot,select});
   }
   if(item.retained) el.classList.add('retained');
-  if(item.detail) text.appendChild(document.createElement('span')).textContent=item.detail.replace(/\s*·\s*4%\s*от оклада/gu,'');
+  const count=item.units??Number(item.detail?.match(/([\d.,]+)\s*(?:шт\. ед\.|штатн)/)?.[1]?.replace(',','.'));
+  if(Number.isFinite(count))text.appendChild(document.createElement('span')).textContent=count.toLocaleString('ru-RU')+' шт. ед.';
   if(item.suggested) el.classList.add('proposed');
   if(item.proposal && el.classList.contains('card')){
     el.classList.add('proposed');
-    const badge=text.appendChild(document.createElement('span'));badge.className='proposal';badge.textContent=item.proposal;
-    const basis=text.appendChild(document.createElement('span'));
-    if(item.source){const a=basis.appendChild(document.createElement('a'));a.href=item.source;a.textContent=item.basis;}
-    else basis.textContent=item.basis;
+
   }
   return el;
 }
@@ -176,7 +174,7 @@ function wires(){
 const mode=new URLSearchParams(location.search).get('view');
 const controls=document.createElement('nav');controls.className='draft-controls';main.prepend(controls);
 for(const [key,label] of [['','Основная штатка'],['platonov','Предложенная штатка'],['compare','Смешанная']]){
-  const link=controls.appendChild(document.createElement('a'));link.href='?ui=motion-mobile2'+(key?'&view='+key:'');
+  const link=controls.appendChild(document.createElement('a'));link.href='?ui=motion-mobile3'+(key?'&view='+key:'');
   link.textContent=label;if((mode||'')===key)link.setAttribute('aria-current','page');
 }
 function element(parent,tag,value){
