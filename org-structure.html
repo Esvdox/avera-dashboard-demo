@@ -87,11 +87,14 @@ main .card select:has(option[value="__vacancy__"]:checked){background:#e4e9f0;co
 
 .export-actions{display:flex;gap:8px;margin-left:12px;align-items:center}
 .export-actions button{border:0;border-radius:20px;background:#e4e9f0;color:#435569;padding:11px 18px;font:inherit;box-shadow:-4px -4px 9px #fff,4px 5px 10px #abb7c899;cursor:pointer}
+.export-actions button{text-shadow:0 1px 0 #fff,0 -1px 1px #33465f55;font-weight:600}
+.export-actions button[aria-label="Скачать Excel"]{color:#217346}
+.export-actions button[aria-label="Скачать PDF"]{color:#b83030}
 .export-actions button:disabled{opacity:.5;cursor:wait}
 .export-actions button:focus-visible{outline:2px solid #7954ff;outline-offset:3px}
 .export-message{align-self:center;font-size:12px}
 .export-message:empty{display:none}
-@media(max-width:700px){.export-actions{margin-left:0;justify-content:center;flex-basis:100%}.export-actions button{min-height:44px}}
+@media(max-width:700px){.draft-controls{row-gap:24px;margin-bottom:32px}.export-actions{margin-left:0;justify-content:center;flex-basis:100%}.export-actions button{min-height:44px}}
 </style>
 <main><h1><span>Лабораттория</span>Штатная структура</h1></main>
 <script src="org-export.js?v=1"></script>
@@ -190,7 +193,7 @@ function wires(){
 const mode=new URLSearchParams(location.search).get('view');
 const controls=document.createElement('nav');controls.className='draft-controls';main.prepend(controls);
 for(const [key,label] of [['','Основная штатка'],['platonov','Предложенная штатка'],['compare','Смешанная']]){
-  const link=controls.appendChild(document.createElement('a'));link.href='?ui=tabs-center1'+(key?'&view='+key:'');
+  const link=controls.appendChild(document.createElement('a'));link.href='?ui=export-colors1'+(key?'&view='+key:'');
   link.textContent=label;if((mode||'')===key)link.setAttribute('aria-current','page');
 }
 function element(parent,tag,value){
