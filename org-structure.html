@@ -32,7 +32,7 @@ main .draft-controls a[aria-current="page"]{background:linear-gradient(135deg,#7
 .staff-counts strong{text-align:center;color:#30465c;text-shadow:0 1px 0 #fff,0 -1px 1px #33465f44}
 .view .draft-grid .card, .view .reporting-root{background:linear-gradient(145deg,#eef2f7,#dce4ed);border-color:#f4f7fb;box-shadow:-3px -3px 7px #fff,4px 5px 10px #abb7c899}
 .card select,.pending-staff input{background:#e2e8f0;border:1px solid #c8d2df;border-radius:10px;padding:7px;color:#30465c;box-shadow:inset 2px 2px 5px #aebacc80,inset -2px -2px 5px #fff}
-.card select:has(option[value="__vacancy__"]:checked){background:#fff0d4}
+.card select:has(option[value="__vacancy__"]:checked){color:#985b17;font-weight:600}
 .card select:has(option:checked:not([value=""]):not([value="__vacancy__"])){background:#dbe3ed}
 .pending-staff{max-width:1100px;margin:36px auto;padding:24px;background:#e4e9f0;border-radius:20px;box-shadow:-5px -5px 12px #fff,6px 7px 15px #abb7c899}
 .pending-staff h2{margin:0 0 12px;text-shadow:0 1px #fff}
@@ -77,6 +77,13 @@ main .draft-controls a{min-width:0;padding:12px 10px;font-size:13px;flex:1 1 95p
 .staff-counts div{white-space:normal;min-width:0;padding:10px;font-size:12px;line-height:1.3}
 .status-guide{flex-wrap:wrap;font-size:12px}
 }
+main .card .assigned-person{
+ display:block;margin:8px 0;padding:7px 10px;border-radius:20px;
+ background:#e4e9f0;color:#435569;font:inherit;line-height:1.35;
+ box-shadow:-4px -4px 9px #fff,4px 5px 10px #abb7c899
+}
+main .card select:has(option[value="__vacancy__"]:checked){background:#e4e9f0;color:#985b17;font-weight:600}
+@media(max-width:700px){main .card .assigned-person{min-height:44px;display:flex;align-items:center;font-size:14px}}
 </style>
 <main><h1><span>Лабораттория</span>Штатная структура</h1></main>
 <script>
@@ -89,7 +96,7 @@ function card(item, icon) {
   if(icon) el.insertAdjacentHTML('beforeend',avatar);
   const text=el.appendChild(document.createElement('div'));
   text.appendChild(document.createElement('strong')).textContent=item.title;
-  for(const name of item.names||[]) text.appendChild(document.createElement('span')).textContent=name;
+  for(const name of item.names||[]){const person=text.appendChild(document.createElement('span'));person.className='assigned-person';person.textContent=name;}
   if(item.budget){const amount=text.appendChild(document.createElement('span'));amount.className='budget';amount.textContent='Плановый ФОТ';const value=amount.appendChild(document.createElement('b'));value.className='budget-value';value.textContent=item.budget+(item.budget==='не утверждён'?'':' ₽ / мес.');}
   if(item.platonov && !['compare','platonov'].includes(new URLSearchParams(location.search).get('view'))) el.classList.add('new-staff');
   for(const slot of item.assignmentSlots||[]){
@@ -174,7 +181,7 @@ function wires(){
 const mode=new URLSearchParams(location.search).get('view');
 const controls=document.createElement('nav');controls.className='draft-controls';main.prepend(controls);
 for(const [key,label] of [['','Основная штатка'],['platonov','Предложенная штатка'],['compare','Смешанная']]){
-  const link=controls.appendChild(document.createElement('a'));link.href='?ui=motion-mobile3'+(key?'&view='+key:'');
+  const link=controls.appendChild(document.createElement('a'));link.href='?ui=people-relief1'+(key?'&view='+key:'');
   link.textContent=label;if((mode||'')===key)link.setAttribute('aria-current','page');
 }
 function element(parent,tag,value){
