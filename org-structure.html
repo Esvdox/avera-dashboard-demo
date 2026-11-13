@@ -133,10 +133,23 @@ if(mode==='platonov'){
   const top=main.appendChild(card(chief,true));top.classList.add('reporting-root');
   const grid=main.appendChild(document.createElement('div'));grid.className='draft-grid';grid.style.setProperty('--tone','#8663ba');
   grid.append(node({...admin,children:admin.children.filter(x=>x!==chief)}));
-  for(const branch of branches)grid.append(node(reporting(branch)));
+    const direct=['Отдел кадров','Отдел охраны труда, промышленной безопасности и экологии'];
+  for(const branch of branches.filter(x=>!direct.includes(x.title)))grid.append(node(reporting(branch)));
+  const pair=element(main,'section','');pair.className='draft-grid';pair.style.setProperty('--tone','#8663ba');
+  top.after(pair);
+  for(const title of direct){
+    const branch=branches.find(x=>x.title===title);
+    pair.append(node(reporting(branch)));
+  }
+  pair.style.maxWidth='720px';
+  pair.style.gridTemplateColumns='repeat(2,minmax(0,1fr))';
+  pair.setAttribute('aria-label','Прямое подчинение генеральному директору');
+  const line=element(pair,'div','Прямое подчинение генеральному директору');
+  line.style.gridColumn='1 / -1';line.style.gridRow='1';line.style.textAlign='center';
 }
 wires();new ResizeObserver(wires).observe(tree);addEventListener('beforeprint',wires);
 </script></html>
+
 
 
 
