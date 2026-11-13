@@ -34,7 +34,7 @@ function card(item, icon) {
   if(item.budget){const amount=text.appendChild(document.createElement('span'));amount.className='budget';amount.textContent='Плановый ФОТ';const value=amount.appendChild(document.createElement('b'));value.className='budget-value';value.textContent=item.budget+(item.budget==='не утверждён'?'':' ₽ / мес.');}
   if(item.platonov) el.classList.add('new-staff');
   if(item.retained) el.classList.add('retained');
-  if(item.detail) text.appendChild(document.createElement('span')).textContent=item.detail;
+  if(item.detail) text.appendChild(document.createElement('span')).textContent=item.detail.replace(/\s*·\s*4%\s*от оклада/gu,'');
   if(item.suggested) el.classList.add('proposed');
   if(item.proposal && el.classList.contains('card')){
     el.classList.add('proposed');
@@ -89,8 +89,8 @@ if(mode==='compare'||mode==='platonov'){
 }
 if(mode==='compare'){
   element(main,'h2','Штатка Платонова с сотрудниками');
-  element(main,'p','Зелёным выделены сотрудники из вашей штатки. Если мест меньше, чем сотрудников на должности, фамилии показаны для распределения.');
-  const ours=new Map(), counts=new Map();
+  element(main,'p','Зелёным выделены сотрудники из вашей штатки. Остальные сотрудники указаны в таблице под схемой.');
+  const ours=new Map(), counts=new Map(), assigned=new Set();
   const key=title=>title.toLowerCase().replace(/\s*,\s*/g,', ').replace(/\s+/g,' ').trim();
   function collect(item){
     if(item.names?.length){
@@ -113,10 +113,29 @@ if(mode==='compare'){
   for(const {item,units} of positions){
     const id=key(item.title),people=ours.get(id)||[];
     if(!people.length)continue;
+    if(counts.get(id)!==1||people.length>units)continue;
     item.names=people;
-    item.retained=counts.get(id)===1&&people.length<=units;
-    if(!item.retained)item.detail+=' · На распределение';
+    item.retained=true;
+    assigned.add(id);
   }
+  const pending=document.createElement('section');
+  pending.className='pending-staff';
+  element(pending,'h2','Нераспределённые сотрудники');
+  const table=pending.appendChild(document.createElement('table'));
+  const head=table.createTHead().insertRow();
+  for(const title of ['ФИО','Текущая должность'])element(head,'th',title);
+  const body=table.createTBody();
+  const entries=[];
+  function pendingRows(item){
+    if(!assigned.has(key(item.title)))for(const name of item.names||[])entries.push([name,item.title]);
+    for(const child of item.children||[])pendingRows(child);
+  }
+  pendingRows(data);
+  for(const [name,title] of entries.sort(([a],[b])=>a.localeCompare(b,'ru'))){
+    const row=body.insertRow();element(row,'td',name);element(row,'td',title);
+  }
+  if(!entries.length){const cell=element(body.insertRow(),'td','Все сотрудники распределены');cell.colSpan=2;}
+  requestAnimationFrame(()=>main.append(pending));
 }
 if(mode==='platonov'){
   element(main,'h2','Подчинение по проекту Платонова');
@@ -137,6 +156,7 @@ if(mode==='compare'||mode==='platonov'){
 }
 wires();new ResizeObserver(wires).observe(tree);addEventListener('beforeprint',wires);
 </script></html>
+
 
 
 
