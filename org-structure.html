@@ -105,13 +105,13 @@ function wires(){
   const center=el=>{const b=el.getBoundingClientRect();return b.left+b.width/2-base.left;};
   const xs=targets.map(center), x=center(root), bus=34;
   const path=document.createElementNS(svg.namespaceURI,'path');
-  path.setAttribute('d',`M ${x} 0 V ${bus} M ${xs[0]} ${bus} H ${xs.at(-1)} `+xs.map(v=>`M ${v} ${bus} V ${targets[0].getBoundingClientRect().top-base.top}`).join(' '));
+  path.setAttribute('d',`M ${x} ${root.getBoundingClientRect().bottom-base.top+1} V ${bus} M ${xs[0]} ${bus} H ${xs.at(-1)} `+xs.map(v=>`M ${v} ${bus} V ${targets[0].getBoundingClientRect().top-base.top-1}`).join(' '));
   path.setAttribute('fill','none');path.setAttribute('stroke','#548487');path.setAttribute('stroke-width','2');svg.replaceChildren(path);
 }
 const mode=new URLSearchParams(location.search).get('view');
 const controls=document.createElement('nav');controls.className='draft-controls';main.prepend(controls);
 for(const [key,label] of [['','Основная штатка'],['platonov','Предложенная штатка'],['compare','Смешанная']]){
-  const link=controls.appendChild(document.createElement('a'));link.href='?ui=relief4'+(key?'&view='+key:'');
+  const link=controls.appendChild(document.createElement('a'));link.href='?ui=relief5'+(key?'&view='+key:'');
   link.textContent=label;if((mode||'')===key)link.setAttribute('aria-current','page');
 }
 function element(parent,tag,value){
@@ -254,7 +254,7 @@ if(mode==='compare'||mode==='platonov'){
     const xs=lanes.map(center);
     links.setAttribute('width',grid.scrollWidth);links.setAttribute('height',70);
     const line=document.createElementNS(svg.namespaceURI,'path');
-    line.setAttribute('d',`M ${center(top)} 0 V 34 M ${xs[0]} 34 H ${xs.at(-1)} `+xs.map(x=>`M ${x} 34 V 68`).join(' '));
+    line.setAttribute('d',`M ${center(top)} ${top.getBoundingClientRect().bottom-bounds.top+1} V 34 M ${xs[0]} 34 H ${xs.at(-1)} `+xs.map(x=>`M ${x} 34 V 67`).join(' '));
     line.setAttribute('fill','none');line.setAttribute('stroke','#548487');line.setAttribute('stroke-width','2');
     links.replaceChildren(line);
   }
