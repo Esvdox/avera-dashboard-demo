@@ -99,7 +99,7 @@ main .card select:has(option[value="__vacancy__"]:checked){background:#e4e9f0;co
 .staff-counts .count-label{display:flex;flex:1;align-items:center;justify-content:center;width:100%;line-height:1.35}
 .staff-counts strong{flex:none;margin-top:8px;line-height:1;font-size:24px;font-variant-numeric:tabular-nums}
 @media(max-width:700px){.staff-counts{grid-auto-rows:1fr;gap:14px}.staff-counts>div{padding:14px 10px;min-height:112px}.staff-counts .count-label{max-width:160px}.staff-counts strong{font-size:26px}}
-</style><link rel="stylesheet" href="org-sculpted.css?v=1">
+</style><link rel="stylesheet" href="org-sculpted.css?v=2">
 <main><h1><span>Лабораттория</span>Штатная структура</h1></main>
 <script src="org-export.js?v=1"></script>
 <script>
@@ -122,7 +122,7 @@ function card(item, icon) {
   }
   if(item.retained) el.classList.add('retained');
   const count=item.units??Number(item.detail?.match(/([\d.,]+)\s*(?:шт\. ед\.|штатн)/)?.[1]?.replace(',','.'));
-  if(Number.isFinite(count))text.appendChild(document.createElement('span')).textContent=count.toLocaleString('ru-RU')+' шт. ед.';
+  if(Number.isFinite(count)){const units=text.appendChild(document.createElement('span'));units.className='unit-count';units.textContent=count.toLocaleString('ru-RU')+' шт. ед.';}
   if(item.suggested) el.classList.add('proposed');
   if(item.proposal && el.classList.contains('card')){
     el.classList.add('proposed');
@@ -165,7 +165,7 @@ function fold(cardEl,panel,label){
   return set;
 }
 function node(item, depth=0){
-  const el=document.createElement('section');el.className='node';el.append(card(item,depth===0||Boolean(item.budget)));
+  const el=document.createElement('section');el.className='node';el.append(card(item,depth<=1||Boolean(item.budget)));
   if(item.children?.length){
     const list=el.appendChild(document.createElement('div'));list.className='children';
     for(const child of item.children) list.append(node(child,depth+1));
@@ -201,7 +201,7 @@ function wires(){
 const mode=new URLSearchParams(location.search).get('view');
 const controls=document.createElement('nav');controls.className='draft-controls';main.prepend(controls);
 for(const [key,label] of [['','Основная штатка'],['platonov','Предложенная штатка'],['compare','Смешанная']]){
-  const link=controls.appendChild(document.createElement('a'));link.href='?ui=sculpted1'+(key?'&view='+key:'');
+  const link=controls.appendChild(document.createElement('a'));link.href='?ui=reference2'+(key?'&view='+key:'');
   link.textContent=label;if((mode||'')===key)link.setAttribute('aria-current','page');
 }
 function element(parent,tag,value){
@@ -358,6 +358,13 @@ if(mode!=='compare'&&mode!=='platonov'){
   fold(root,tree,data.title);
   branchesUI.unshift(branchesUI.pop());
 }
+
+const activeChart=mode==='compare'||mode==='platonov'?main.querySelector('.draft-grid'):tree;
+const chartViewport=document.createElement('div');chartViewport.className='chart-viewport';
+chartViewport.tabIndex=0;chartViewport.setAttribute('role','region');chartViewport.setAttribute('aria-label','Структура подчинения — горизонтальная прокрутка');
+activeChart.before(chartViewport);chartViewport.append(activeChart);
+chartViewport.addEventListener('scroll',()=>{if(mode==='compare'||mode==='platonov')draw();else wires();},{passive:true});
+new ResizeObserver(()=>{if(mode==='compare'||mode==='platonov')draw();else wires();}).observe(chartViewport);
 
 function exportSnapshot(){
   const title=mode==='compare'?'Смешанная штатка':mode==='platonov'?'Предложенная штатка':'Основная штатка';

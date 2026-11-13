@@ -134,3 +134,121 @@ main :is(a,button,select):focus-visible{outline:3px solid #528566!important;outl
 @media(prefers-reduced-motion:reduce){
  main .draft-controls a,.export-actions button{transition:none;transform:none}
 }
+/* Measured reference geometry, approved 1536 x 1024 frame. */
+:root{
+ --staff-canvas:#e5e1d9;
+ --staff-surface:linear-gradient(135deg,#f2eee7 0%,#e9e5dd 52%,#dedad1 100%);
+ --staff-raised:inset 2px 3px 2px #fffdf8,inset -2px -3px 3px #a9a59966,0 4px 2px #817e7355,0 16px 19px #5d594b55;
+ --staff-small:inset 2px 3px 2px #fffdf8,inset -1px -2px 2px #aaa69899,0 3px 1px #928e8055,0 9px 11px #66615144;
+}
+html,body{max-width:100%;overflow-x:hidden}
+main .chart-viewport{width:100%;overflow-x:auto;overflow-y:hidden;padding:0 0 26px;scrollbar-width:thin;scrollbar-color:#a3baa8 #dcd8ce;outline-offset:-3px}
+main .chart-viewport:focus-visible{outline:2px solid #528566}
+main .card .unit-count{font-size:11px;line-height:1.2;color:#6a675f}
+main:not(.view) .card .assigned-person{display:block;padding:0;margin:5px 0 0;min-height:0;background:none;border:0;border-radius:0;box-shadow:none;color:var(--staff-ink)}
+main .card .icon{border-radius:17px;background:linear-gradient(135deg,#e8e4db,#d6d2c8);box-shadow:inset 2px 3px 2px #fffdf8,inset -2px -2px 2px #9d998d99,0 3px 2px #85817355,0 6px 7px #5d594b50;color:#89867a}
+main .card .icon path{stroke-width:2.5;filter:drop-shadow(1px 1px 0 #fffdf4) drop-shadow(-.5px -.5px .3px #615e52)}
+main .card .budget-value{white-space:normal}
+main .wires path{stroke:#a3d7b5;stroke-width:6;filter:drop-shadow(-1px -1px 0 #f7fff0) drop-shadow(1px 2px 1px #62816999)}
+main .children,main.view .draft-grid .children{border-left:4px solid #acd9bb;box-shadow:-1px 0 0 #fafff3,2px 0 2px #708f7690}
+main .node>.card::before,main .root::after{width:20px;height:20px;left:calc(50% - 10px);top:-11px;border:1px solid #e8fce6;background:linear-gradient(135deg,#c9ead0,#94c9a6);box-shadow:inset 0 2px 1px #f4fff5,0 2px 2px #60816b88}
+main .root::after{top:auto;bottom:-11px}
+main .children>.node>.card::before{width:16px;height:16px;top:calc(50% - 8px);left:-25px}
+@media(min-width:701px){
+ main,main.view,main.view:has(.draft-grid){padding:18px 32px 48px}
+ main .draft-controls{width:100%;max-width:1412px;margin:0 auto 30px;gap:20px;min-height:62px;flex-wrap:nowrap}
+ main .draft-controls>a{min-width:0;flex:none;height:62px;min-height:62px;padding:10px 18px;border-radius:32px;font-size:26px;line-height:1.1}
+ main .draft-controls>a:nth-child(1){width:286px}
+ main .draft-controls>a:nth-child(2){width:356px}
+ main .draft-controls>a:nth-child(3){width:238px}
+ main .export-actions{margin-left:auto;gap:24px}
+ main .export-actions button{font-size:32px;height:64px;min-height:64px;border-radius:23px;padding:8px 24px;min-width:132px}
+ main .export-actions button:first-child{min-width:151px}
+ main .export-message{position:absolute;top:100%;right:0;font-size:12px}
+ main>h1,main.view>h1[hidden]{width:772px;max-width:100%;height:130px;display:flex!important;flex-direction:column;justify-content:center;align-items:center;padding:12px 24px;margin:0 auto 26px;font-size:56px;font-weight:700;line-height:1.1;border-radius:27px}
+ main>h1 span{font-size:21px;font-weight:600;letter-spacing:.25em;margin-bottom:9px}
+ main .card.root,main.view .reporting-root{width:642px;max-width:100%;min-height:190px;margin:0 auto;padding:22px 36px 22px 28px;font-size:30px;border-radius:30px;gap:38px}
+ main .card.root>div{padding-left:24px;border-left:1px solid #a7a39688}
+ main .card.root .icon{width:108px;height:104px;padding:13px 22px;border-radius:25px}
+ main .card.root strong{font-size:30px;line-height:1.1;padding-right:15px}
+ main:not(.view) .card.root .assigned-person{font-size:23px;line-height:1.15;margin:6px 0 0}
+ main .card.root .budget{font-size:18px;line-height:1.2;margin-top:10px;padding-top:9px}
+ main .card.root .budget-value{font-size:30px;line-height:1.2;margin-top:3px}
+ main .card.root .unit-count{position:absolute;bottom:9px;right:24px;font-size:10px}
+ main .card.root>.fold{width:40px;height:40px;font-size:28px;top:12px;right:12px}
+ main .tree,main.view .draft-grid{width:max-content;min-width:0;max-width:none;grid-template-columns:repeat(6,354px);gap:22px;padding:70px 0 12px;margin:0}
+ main.view .draft-grid{grid-template-columns:repeat(9,354px)}
+ main .tree>.lane>.node>.card,main.view .draft-grid>div>.node>.card{min-height:160px;padding:18px 16px;border-radius:26px;gap:15px;align-items:center}
+ main .tree>.lane>.node>.card>div,main.view .draft-grid>div>.node>.card>div{flex:1}
+ main .tree>.lane>.node>.card:has(>.fold),main.view .draft-grid>div>.node>.card:has(>.fold){padding-right:20px}
+ main .tree>.lane>.node>.card strong,main.view .draft-grid>div>.node>.card strong{font-size:22px;line-height:1.04;padding-right:26px}
+ main .tree>.lane>.node>.card .icon,main.view .draft-grid>div>.node>.card .icon{width:70px;height:74px;padding:10px 15px}
+ main:not(.view) .tree>.lane>.node>.card .assigned-person{font-size:17px;line-height:1.15;margin-top:7px}
+ main:not(.view) .tree>.lane>.node>.card .budget{font-size:0;margin-top:8px;padding-top:8px}
+ main:not(.view) .tree>.lane>.node>.card .budget-value{font-size:21px;line-height:1.1;margin:0}
+ main .tree>.lane>.node>.card .unit-count{position:absolute;bottom:7px;right:18px;font-size:10px}
+ main .children,main.view .draft-grid .children{gap:8px;margin:20px 0 0 24px;padding-left:16px}
+ main .children>.node>.card{min-height:64px;font-size:18px;padding:10px 14px;border-radius:22px;gap:12px}
+ main .children>.node>.card strong{font-size:18px;line-height:1.12}
+ main .children>.node>.card .icon{width:34px;height:40px;padding:3px;border:0;background:none;box-shadow:none}
+ main .children>.node>.card .budget{font-size:12px;margin-top:6px;padding-top:5px}
+ main .children>.node>.card .assigned-person{font-size:16px}
+ main .children>.node>.card:has(>.fold){padding-right:46px}
+ main .children>.node>.card>.fold{top:50%;transform:translateY(-50%);right:10px}
+ main .fold{width:34px;height:34px;font-size:25px;right:10px;top:10px}
+}
+@media(min-width:701px) and (max-width:1300px){
+ main .draft-controls{gap:12px;flex-wrap:wrap}
+ main .draft-controls>a{width:auto!important;flex:1;font-size:20px}
+ main .export-actions button{font-size:22px;min-width:90px!important}
+ main>h1,main.view>h1[hidden]{height:auto;min-height:104px;font-size:44px}
+}
+@media(max-width:700px){
+ main .chart-viewport{overflow:visible;padding:0}
+ main .tree,main.view .draft-grid{width:100%;min-width:0}
+ main .node>.card::before,main .root::after{width:12px;height:12px;left:calc(50% - 6px);top:-7px}
+ main .root::after{top:auto;bottom:-7px}
+ main .children>.node>.card::before{width:9px;height:9px;left:-15px;top:calc(50% - 5px)}
+ main:not(.view) .card .assigned-person{font-size:14px}
+}
+/* Final optical alignment against the reference frame. */
+main .children,main.view .draft-grid .children{box-shadow:none;border-left-style:ridge;border-left-color:#b9dec3}
+@media(min-width:701px){
+ main .draft-controls{padding:0}
+ main>h1,main.view>h1[hidden]{font-size:60px}
+ main .card.root.root,main.view .card.reporting-root.root{padding:22px 24px 22px 26px;gap:16px}
+ main .children>.node>.card strong{font-size:17px;font-weight:500;line-height:1.1}
+ main .children>.node>.card{padding-top:10px;padding-bottom:10px}
+}
+@media(min-width:1301px){
+ main .draft-controls{margin-bottom:28px}
+ main>h1,main.view>h1[hidden]{transform:translateX(-4px)}
+ main .card.root.root,main.view .card.reporting-root.root{padding-top:21px;padding-bottom:21px;transform:translateX(-4px)}
+ main .tree{grid-template-columns:354px 354px 346px 350px repeat(2,354px)}
+}
+@font-face{font-family:StaffInter;src:url("org-assets/Inter-variable.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:swap}
+body{font-family:StaffInter,Arial,sans-serif}
+main .draft-controls a,.export-actions button{font-family:inherit}
+@media(min-width:701px){
+ main>h1,main.view>h1[hidden]{font-size:58px;font-weight:750}
+ main .card.root strong{font-weight:750}
+ main .children>.node>.card strong{font-size:17px;font-weight:500;letter-spacing:-.45px}
+}
+@media(min-width:701px){
+ main .card.root.root,main.view .card.reporting-root.root{padding-top:19px;padding-bottom:19px}
+ main .card.root strong{font-size:32px}
+ main:not(.view) .card.root .assigned-person{font-size:25px}
+ main .card.root .budget{margin-top:8px;padding-top:8px}
+ main .card.root .budget-value{font-size:31.5px}
+ main .children>.node>.card{padding-left:8px}
+ main .children>.node>.card strong{font-size:16.5px;font-weight:550;letter-spacing:-.6px}
+}
+main .card .icon path{stroke-width:2}
+@media(min-width:701px){
+ main .children>.node>.card strong{letter-spacing:-.7px}
+}
+@media(min-width:1301px){
+ main .export-actions{position:relative;right:-16px}
+ main>h1,main.view>h1[hidden]{font-size:60.5px;padding-top:6px;padding-bottom:18px}
+ main>h1 span{transform:translateY(6px)}
+}
