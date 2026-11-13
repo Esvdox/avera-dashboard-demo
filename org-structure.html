@@ -94,8 +94,6 @@ if(mode==='compare'||mode==='platonov'){
   tree.hidden=true;root.hidden=true;main.classList.add('view');main.querySelector('h1').hidden=true;
 }
 if(mode==='compare'){
-  element(main,'h2','Штатка Платонова с сотрудниками');
-  element(main,'p','Зелёным выделены сотрудники из вашей штатки. Остальные сотрудники указаны в таблице под схемой.');
   const ours=new Map(), counts=new Map(), assigned=new Set();
   const key=title=>title.toLowerCase().replace(/\s*,\s*/g,', ').replace(/\s+/g,' ').trim();
   function collect(item){
@@ -198,10 +196,6 @@ if(mode==='compare'){
     }
     refresh();
   });
-}
-if(mode==='platonov'){
-  element(main,'h2','Подчинение по проекту Платонова');
-  element(main,'p','Штатное расписание от 11.11.2026. Где прямой руководитель не указан, показано предполагаемое подчинение.');
 }
 if(mode==='compare'||mode==='platonov'){
     function reporting(item){
