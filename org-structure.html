@@ -29,7 +29,7 @@ main .draft-controls a{border:0;border-radius:20px;background:#e4e9f0;color:#435
 main .draft-controls a[aria-current="page"]{background:linear-gradient(135deg,#7954ff,#6546ec);color:#fff;box-shadow:0 4px 10px #7653ea66}
 .staff-counts{padding:10px 12px 14px;gap:14px}
 .staff-counts div{border:0;border-radius:16px;background:linear-gradient(145deg,#eef2f7,#d9e1eb);color:#435569;box-shadow:-4px -4px 9px #ffffffd9,4px 5px 10px #abb7c899}
-.staff-counts strong{color:#30465c;text-shadow:0 1px 0 #fff,0 -1px 1px #33465f44}
+.staff-counts strong{text-align:center;color:#30465c;text-shadow:0 1px 0 #fff,0 -1px 1px #33465f44}
 </style>
 <main><h1><span>Лабораттория</span>Штатная структура</h1></main>
 <script>
@@ -94,7 +94,7 @@ function wires(){
 const mode=new URLSearchParams(location.search).get('view');
 const controls=document.createElement('nav');controls.className='draft-controls';main.prepend(controls);
 for(const [key,label] of [['','Основная штатка'],['platonov','Предложенная штатка'],['compare','Смешанная']]){
-  const link=controls.appendChild(document.createElement('a'));link.href='?ui=relief2'+(key?'&view='+key:'');
+  const link=controls.appendChild(document.createElement('a'));link.href='?ui=relief3'+(key?'&view='+key:'');
   link.textContent=label;if((mode||'')===key)link.setAttribute('aria-current','page');
 }
 function element(parent,tag,value){
