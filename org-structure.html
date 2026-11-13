@@ -87,45 +87,40 @@ if(mode==='compare'||mode==='platonov'){
   tree.hidden=true;root.hidden=true;main.classList.add('view');main.querySelector('h1').hidden=true;
 }
 if(mode==='compare'){
-  element(main,'h2','Сравнение штатных расписаний');
-  element(main,'p','Сопоставление по названию должности. Разные названия показаны отдельными строками. Зелёным выделены сотрудники, для которых должность и число мест позволяют однозначное сопоставление. Условные ставки подписаны. Исходник Платонова от 11.11.2026 — 85 ставок. В сравнении также учтены добавленные ставки проектов, конструкторов и бухгалтерии.');
-  function collect(item,path,rows,projectSide=false,inherited=''){
-    const status=item.proposal||inherited;
-    const units=projectSide?Number(item.detail?.match(/^([\d.]+) шт\. ед\./)?.[1]):item.units;
-    if(Number.isFinite(units)){
-      const title=item.title.trim();
-      if(!rows.has(title))rows.set(title,[[],[]]);
-      rows.get(title)[Number(projectSide)].push({units,path:path.join(' → '),conditional:status.startsWith('Условно'),names:item.names||[]});
+  element(main,'h2','Штатка Платонова с сотрудниками');
+  element(main,'p','Зелёным выделены сотрудники из вашей штатки. Если мест меньше, чем сотрудников на должности, фамилии показаны для распределения.');
+  const ours=new Map(), counts=new Map();
+  const key=title=>title.toLowerCase().replace(/\s*,\s*/g,', ').replace(/\s+/g,' ').trim();
+  function collect(item){
+    if(item.names?.length){
+      const id=key(item.title);
+      ours.set(id,[...new Set([...(ours.get(id)||[]),...item.names])]);
     }
-    for(const child of item.children||[])collect(child,[...path,item.title],rows,projectSide,status);
+    for(const child of item.children||[])collect(child);
   }
-  const rows=new Map();
-  collect(data,[],rows);
-  for(const branch of project.children)collect(branch,[],rows,true);
+  collect(data);
+  const positions=[];
+  function list(item,path=[]){
+    const units=Number(item.detail?.match(/^([\d.]+) шт\. ед\./)?.[1]);
+    if(Number.isFinite(units)){
+      positions.push({item,path:path.join(' → '),units});
+      const id=key(item.title);counts.set(id,(counts.get(id)||0)+1);
+    }
+    for(const child of item.children||[])list(child,[...path,item.title]);
+  }
+  for(const branch of project.children)list(branch);
   const table=main.appendChild(document.createElement('table'));
   const head=table.createTHead().insertRow();
-  for(const label of ['Должность','Наша схема','Проект Платонова','Разница ставок (проект − наша)','Сотрудники в проекте'])element(head,'th',label);
+  for(const title of ['Подразделение / подчинение','Должность','Ставок','Сотрудники'])element(head,'th',title);
   const body=table.createTBody();
-  const total=items=>items.reduce((sum,item)=>sum+item.units,0);
-  const fmt=value=>value.toLocaleString('ru-RU',{maximumFractionDigits:2});
-  for(const [title,[ours,theirs]] of [...rows].sort(([a],[b])=>a.localeCompare(b,'ru'))){
-    const row=body.insertRow(),delta=total(theirs)-total(ours);
-    if(delta||ours.map(x=>x.path).join()!==theirs.map(x=>x.path).join())row.className='diff';
-    element(row,'td',title);
-    for(const side of [ours,theirs]){
-      const cell=row.insertCell();
-      if(!side.length)cell.textContent='—';
-      for(const x of side)element(cell,'div',fmt(x.units)+' · '+(x.path||'Руководитель компании')+(x.conditional?' (условно)':''));
-    }
-    element(row,'td',(delta>0?'+':'')+fmt(delta));
+  for(const {item,path,units} of positions){
+    const row=body.insertRow(),id=key(item.title),people=ours.get(id)||[];
+    element(row,'td',path);element(row,'td',item.title);element(row,'td',units.toLocaleString('ru-RU'));
     const cell=row.insertCell();
-    const people=[...new Set(ours.flatMap(x=>x.names))];
-    if(theirs.length&&people.length&&ours.length===1&&theirs.length===1&&people.length<=total(theirs)){
-      row.classList.add('retained');
-      for(const name of people)element(cell,'div',name);
-    }else{
-      cell.textContent=theirs.length&&people.length?'Требуется распределение: '+people.join(', '):'—';
-    }
+    if(!people.length){cell.textContent='—';continue;}
+    if(counts.get(id)===1&&people.length<=units)row.classList.add('retained');
+    else element(cell,'strong','На распределение');
+    for(const name of people)element(cell,'div',name);
   }
 }
 if(mode==='platonov'){
@@ -145,6 +140,7 @@ if(mode==='platonov'){
 }
 wires();new ResizeObserver(wires).observe(tree);addEventListener('beforeprint',wires);
 </script></html>
+
 
 
 
