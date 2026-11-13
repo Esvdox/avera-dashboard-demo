@@ -155,16 +155,18 @@ if(mode==='compare'){
   try{saved=JSON.parse(localStorage.getItem(storageKey)||'{}')||{};}catch{}
   const selected=new Map(),used=new Set();
   for(const [id,name] of Object.entries(saved)){
-    if(slots.has(id)&&pool.includes(name)&&!used.has(name)){selected.set(id,name);used.add(name);}
+    if(!slots.has(id))continue;
+    if(name==='__vacancy__')selected.set(id,name);
+    else if(pool.includes(name)&&!used.has(name)){selected.set(id,name);used.add(name);}
   }
   function refresh(){
     const taken=new Set(selected.values());
     for(const {slot,select} of assignmentInputs){
       const current=selected.get(slot.id)||'';
-      select.replaceChildren(new Option('Выбрать сотрудника',''));
+      select.replaceChildren(new Option('Выбрать сотрудника',''),new Option('Вакансия','__vacancy__'));
       for(const name of pool)if(name===current||!taken.has(name))select.add(new Option(name,name));
       select.value=current;
-      select.closest('.card').classList.toggle('retained',Boolean(select.closest('.card').querySelector('select option:checked:not([value=""])'))||select.closest('.card').dataset.matched==='true');
+      select.closest('.card').classList.toggle('retained',Boolean(select.closest('.card').querySelector('select option:checked:not([value=""]):not([value="__vacancy__"])'))||select.closest('.card').dataset.matched==='true');
     }
     body.replaceChildren();
     for(const [name,title] of entries.filter(([name])=>!taken.has(name)&&!matchedNames.has(name)).sort(([a],[b])=>a.localeCompare(b,'ru'))){
@@ -205,6 +207,7 @@ if(mode==='compare'||mode==='platonov'){
 }
 wires();new ResizeObserver(wires).observe(tree);addEventListener('beforeprint',wires);
 </script></html>
+
 
 
 
