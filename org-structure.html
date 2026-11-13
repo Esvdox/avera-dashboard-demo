@@ -176,7 +176,7 @@ function wires(){
 const mode=new URLSearchParams(location.search).get('view');
 const controls=document.createElement('nav');controls.className='draft-controls';main.prepend(controls);
 for(const [key,label] of [['','Основная штатка'],['platonov','Предложенная штатка'],['compare','Смешанная']]){
-  const link=controls.appendChild(document.createElement('a'));link.href='?ui=motion-mobile1'+(key?'&view='+key:'');
+  const link=controls.appendChild(document.createElement('a'));link.href='?ui=motion-mobile2'+(key?'&view='+key:'');
   link.textContent=label;if((mode||'')===key)link.setAttribute('aria-current','page');
 }
 function element(parent,tag,value){
@@ -331,14 +331,6 @@ if(mode==='compare'||mode==='platonov'){
 if(mode!=='compare'&&mode!=='platonov'){
   fold(root,tree,data.title);
   branchesUI.unshift(branchesUI.pop());
-}
-const actions=element(main,'div','');actions.className='motion-actions';
-controls.after(actions);
-for(const [label,handler] of [
-  ['Свернуть до ГД',async()=>{await branchesUI[0](false);branchesUI.slice(1).forEach(set=>set(false,false));}],
-  ['Развернуть всё',async()=>{await branchesUI[0](false,false);branchesUI.slice(1).forEach(set=>set(true,false));await branchesUI[0](true);}]
-]){
-  const button=element(actions,'button',label);button.type='button';button.addEventListener('click',handler);
 }
 wires();new ResizeObserver(wires).observe(tree);addEventListener('beforeprint',wires);
 </script></html>
