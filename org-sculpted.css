@@ -1,0 +1,136 @@
+/* Approved warm, sculpted staffing theme. Isolated from the corporate dashboard. */
+:root{
+ --staff-canvas:#e6e3dc;
+ --staff-surface:linear-gradient(145deg,#f4f1eb 0%,#eae7df 55%,#dfdcd4 100%);
+ --staff-ink:#363630;
+ --staff-muted:#62615a;
+ --staff-mint:linear-gradient(145deg,#d5f0de,#aed8bd 62%,#91bda2);
+ --staff-raised:inset 1px 2px 2px #ffffffed,inset -1px -2px 2px #bab7aa99,0 3px 2px #99968b55,0 10px 16px #75716438;
+ --staff-small:inset 1px 2px 2px #fffffff0,inset -1px -2px 2px #b7b3a780,0 2px 2px #99968b55,0 5px 8px #75716435;
+}
+html,body,main,main.view{background:var(--staff-canvas);color:var(--staff-ink)}
+body{font-family:Arial,sans-serif}
+main,main.view{background:radial-gradient(ellipse at 50% 0,#f3f0e960,transparent 900px)}
+main .draft-controls{gap:18px;margin-bottom:32px;align-items:stretch}
+main .draft-controls a,.export-actions button{
+ display:flex;align-items:center;justify-content:center;
+ background:var(--staff-surface);color:var(--staff-ink);
+ border:1px solid #f8f6f0;border-radius:24px;
+ box-shadow:var(--staff-raised);font-weight:600;
+ text-shadow:0 1px #fff9;padding:13px 22px;min-height:48px;
+ transition:box-shadow .18s ease,transform .18s ease;
+}
+main .draft-controls a[aria-current="page"]{
+ background:var(--staff-mint);color:#254b37;border-color:#ccebd7;
+ box-shadow:inset 1px 2px 2px #f4fff4, inset -1px -2px 2px #67977a88,0 3px 2px #71897577,0 9px 14px #65786640;
+}
+.export-actions{gap:14px;margin-left:24px}
+.export-actions button{text-shadow:0 1px 0 #fff,0 -1px 1px #36363044}
+.export-actions button[aria-label="Скачать Excel"]{color:#217346}
+.export-actions button[aria-label="Скачать PDF"]{color:#a43e38}
+main>h1,main.view>h1[hidden]{
+ background:var(--staff-surface);color:var(--staff-ink);
+ border:1px solid #f8f6f0;border-radius:26px;box-shadow:var(--staff-raised);
+ padding:20px 48px;margin-bottom:30px;font-size:34px;line-height:1.16;
+ text-shadow:0 1px 0 #fff;
+}
+main>h1 span{color:#66645e;font-size:13px;letter-spacing:.26em;margin-bottom:8px}
+main .card,
+main .card:not(.proposed):not(.new-staff),
+main.view .draft-grid .card,
+main.view .reporting-root{
+ background:var(--staff-surface);border:1px solid #f8f6f0;
+ border-radius:22px;color:var(--staff-ink);box-shadow:var(--staff-raised);
+ padding:18px 16px;gap:12px;
+}
+main .children>.node>.card{border-radius:18px;padding:12px;font-size:.94em;box-shadow:var(--staff-small)}
+main .card:has(>.fold),main .children>.node>.card:has(>.fold){padding-right:48px}
+main .card>div{flex:1;min-width:0}
+main .card strong{color:var(--staff-ink);line-height:1.25}
+main .card span{color:var(--staff-muted);line-height:1.35}
+main .card .budget{color:var(--staff-muted);border-top:1px solid #bcb8ab88;padding-top:8px;margin-top:10px;font-size:.82em;font-weight:400}
+main .card .budget-value{color:var(--staff-ink);font-size:1.15em;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}
+main .card.root,main.view .reporting-root{width:480px;max-width:100%;padding:22px 52px 22px 22px;font-size:20px}
+main .card .icon{
+ width:42px;height:48px;padding:7px;flex:none;border-radius:13px;
+ background:var(--staff-surface);border:1px solid #fcfaf4;
+ box-shadow:var(--staff-small);filter:none;color:#77786d;
+}
+main .card.root .icon{width:64px;height:72px;padding:10px;border-radius:18px}
+main .card .icon path{filter:drop-shadow(0 1px 0 #fff)}
+main .card .assigned-person,main .card select,main.view .draft-grid .card select{
+ background:var(--staff-surface);color:var(--staff-ink);border:1px solid #f4f1e9;
+ border-radius:16px;box-shadow:var(--staff-small);font-weight:400;
+ padding:9px 12px;margin:10px 0;line-height:1.35;
+}
+main .card select:has(option[value="__vacancy__"]:checked){background:var(--staff-surface);color:#935616;font-weight:600}
+main .card select option{background:#eeebe4;color:var(--staff-ink)}
+main .card.proposed,main.view .draft-grid .card.proposed{background:var(--staff-surface);border-color:#f8f6f0;border-left:3px solid #bf9656;box-shadow:var(--staff-raised)}
+main .card.new-staff{background:var(--staff-surface);border-color:#f8f6f0;border-left:3px solid #99869f;box-shadow:var(--staff-raised)}
+main .card .proposal{color:#885721}
+main .fold,main .fold[aria-expanded=false]{
+ position:absolute;top:12px;right:10px;margin:0;width:30px;height:30px;min-width:30px;min-height:30px;
+ display:flex;align-items:center;justify-content:center;padding:0;
+ background:var(--staff-mint);border:1px solid #eaffee;border-radius:50%;
+ color:#31513c;font-size:22px;line-height:1;
+ box-shadow:inset 0 1px 1px white,inset 0 -1px 1px #7ba98b,0 3px 4px #69746160;
+}
+main .fold[aria-expanded=false]{color:#21452f;background:linear-gradient(145deg,#c4e8d0,#9bcbae)}
+main .staff-counts>div{
+ background:var(--staff-surface);border:1px solid #f8f6f0;
+ border-radius:22px;color:var(--staff-muted);box-shadow:var(--staff-raised);
+}
+main .staff-counts strong{color:var(--staff-ink);text-shadow:0 1px #fff}
+main .status-guide{gap:14px;margin:20px auto}
+main .status-guide span,main .status-guide span:first-child,main .status-guide span:nth-child(2){
+ background:var(--staff-surface);color:var(--staff-muted);box-shadow:var(--staff-small);border:1px solid #f8f6f0;padding:7px 14px;
+}
+main .status-guide span:nth-child(2){color:#935616}
+main .wires path{stroke:#abd8bb;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(-1px -1px 0 #f5fff4) drop-shadow(1px 2px 1px #6b8d7580)}
+main .children,main.view .draft-grid .children{border-left:3px solid #b1d9bc;box-shadow:-1px 0 0 #f6fff2,1px 0 1px #7d9f8480;padding-left:18px;gap:16px;margin-top:18px}
+main .node>.card::before,main .root::after{
+ width:12px;height:12px;background:var(--staff-mint);
+ border:1px solid #ddf5e0;box-shadow:0 1px 2px #65867170;
+}
+main .children>.node>.card::before{left:-24px;width:9px;height:9px}
+main .view .card.retained:not(.root)::after{content:none}
+main .card.retained:not(.root)::after{content:none}
+main :is(a,button,select):focus-visible{outline:3px solid #528566!important;outline-offset:4px!important}
+@media(hover:hover){
+ main .draft-controls a:hover,.export-actions button:hover{transform:translateY(-1px)}
+ main .fold:hover{filter:brightness(1.04)}
+}
+@media(min-width:701px){
+ main,main.view,main.view:has(.draft-grid){min-width:0;width:100%;padding:30px 32px 64px}
+ main .tree{min-width:1680px;gap:24px}
+ main.view .draft-grid{min-width:2500px;gap:22px}
+ main .draft-controls,main>h1,main .staff-counts,main .status-guide{max-width:calc(100vw - 64px)}
+ main .card.root,main.view .reporting-root{margin-left:calc((100vw - 64px - 480px)/2);margin-right:0}
+}
+@media(max-width:700px){
+ main .draft-controls{gap:24px 10px;margin-bottom:32px}
+ main .draft-controls a{padding:12px 8px;font-size:12px;border-radius:22px;min-height:54px;flex:1 1 85px}
+ .export-actions{margin-left:0;gap:16px}
+ .export-actions button{min-height:46px;padding:12px 22px}
+ main>h1,main.view>h1[hidden]{font-size:24px;padding:20px 28px;border-radius:24px;margin-bottom:26px}
+ main>h1 span{font-size:11px}
+ main .card.root,main.view .reporting-root{width:100%;max-width:100%;font-size:16px}
+ main .card,main .children>.node>.card{border-radius:20px!important;padding:16px 12px!important}
+ main .card:has(>.fold){padding-right:48px!important}
+ main .card .icon{width:32px;height:40px;padding:5px;border-radius:10px}
+ main .card.root .icon{width:42px;height:52px;padding:7px}
+ main .fold{width:36px;height:36px;min-width:36px;min-height:36px;top:10px;right:7px}
+ main .fold::after{content:"";position:absolute;inset:-4px}
+ main .tree>.lane,main.view .draft-grid>div{border-left:3px solid #b1d9bc;box-shadow:-1px 0 0 #f6fff2;padding-left:10px}
+ main .children,main.view .draft-grid .children{padding-left:9px;gap:14px;margin-top:14px}
+ main .children>.node>.card::before{left:-15px}
+ main .card select{font-size:16px!important}
+ main .card .assigned-person{font-size:14px;min-height:44px}
+ main .staff-counts{gap:16px;padding:10px 0 16px}
+ main .staff-counts>div{min-height:112px}
+ main .status-guide{gap:8px}
+ main .status-guide span{padding:7px 10px}
+}
+@media(prefers-reduced-motion:reduce){
+ main .draft-controls a,.export-actions button{transition:none;transform:none}
+}
