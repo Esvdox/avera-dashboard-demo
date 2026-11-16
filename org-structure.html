@@ -201,7 +201,7 @@ function wires(){
 const mode=new URLSearchParams(location.search).get('view');
 const controls=document.createElement('nav');controls.className='draft-controls';main.prepend(controls);
 for(const [key,label] of [['','Основная штатка'],['platonov','Предложенная штатка'],['compare','Смешанная']]){
-  const link=controls.appendChild(document.createElement('a'));link.href='?ui=reference2'+(key?'&view='+key:'');
+  const link=controls.appendChild(document.createElement('a'));link.href='?ui=no-legend1'+(key?'&view='+key:'');
   link.textContent=label;if((mode||'')===key)link.setAttribute('aria-current','page');
 }
 function element(parent,tag,value){
@@ -285,8 +285,6 @@ if(mode==='compare'){
     const caption=element(card,'span',label);caption.className='count-label';
     return element(card,'strong','');
   });
-  const legend=element(main,'div','');legend.className='status-guide';
-  for(const label of ['Назначен','Вакансия','Без решения'])element(legend,'span',label);
   search.addEventListener('input',refresh);
   function refresh(){
     const vacancies=[...selected.values()].filter(value=>value==='__vacancy__').length;
