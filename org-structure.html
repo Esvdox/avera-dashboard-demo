@@ -99,7 +99,7 @@ main .card select:has(option[value="__vacancy__"]:checked){background:#e4e9f0;co
 .staff-counts .count-label{display:flex;flex:1;align-items:center;justify-content:center;width:100%;line-height:1.35}
 .staff-counts strong{flex:none;margin-top:8px;line-height:1;font-size:24px;font-variant-numeric:tabular-nums}
 @media(max-width:700px){.staff-counts{grid-auto-rows:1fr;gap:14px}.staff-counts>div{padding:14px 10px;min-height:112px}.staff-counts .count-label{max-width:160px}.staff-counts strong{font-size:26px}}
-</style><link rel="stylesheet" href="org-sculpted.css?v=3">
+</style><link rel="stylesheet" href="org-sculpted.css?v=4">
 <main><h1><span>Лабораттория</span>Штатная структура</h1></main>
 <script src="org-export.js?v=1"></script>
 <script>
@@ -186,22 +186,31 @@ const targets=groups.map((group,index)=>{
 });
 const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.classList.add('wires');svg.setAttribute('aria-hidden','true');tree.prepend(svg);
 function sculptedConnector(x,start,xs,end,bus=34){
-  const left=xs[0],right=xs.at(-1),r=Math.min(12,(right-left)/2);
-  return `M ${x} ${start} V ${bus} M ${left} ${end} V ${bus+r} Q ${left} ${bus} ${left+r} ${bus} H ${right-r} Q ${right} ${bus} ${right} ${bus+r} V ${end} `+xs.slice(1,-1).map(v=>`M ${v} ${bus} V ${end}`).join(' ');
+  const left=xs[0],right=xs.at(-1),r=Math.min(18,(right-left)/4,Math.max(0,(bus-start)/2));
+  const stem=`M ${x} ${start} V ${bus-r}`;
+  const leftArm=`${stem} Q ${x} ${bus} ${x-r} ${bus} H ${left+r} Q ${left} ${bus} ${left} ${bus+r} V ${end}`;
+  const rightArm=`${stem} Q ${x} ${bus} ${x+r} ${bus} H ${right-r} Q ${right} ${bus} ${right} ${bus+r} V ${end}`;
+  return leftArm+' '+rightArm+' '+xs.slice(1,-1).map(v=>Math.abs(v-x)<r?`M ${v} ${bus} V ${end}`:`M ${v+(v<x?r:-r)} ${bus} Q ${v} ${bus} ${v} ${bus+r} V ${end}`).join(' ');
+}
+function paintSculptedWires(svg,d){
+  const layers=['wire-shadow','wire-body','wire-face','wire-highlight'].map(name=>{
+    const path=document.createElementNS(svg.namespaceURI,'path');
+    path.setAttribute('d',d);path.setAttribute('fill','none');path.setAttribute('class',name);
+    return path;
+  });
+  svg.replaceChildren(...layers);
 }
 function wires(){
   const base=tree.getBoundingClientRect();
   svg.setAttribute('width',base.width);svg.setAttribute('height',base.height);
   const center=el=>{const b=el.getBoundingClientRect();return b.left+b.width/2-base.left;};
   const xs=targets.map(center), x=center(root), bus=34;
-  const path=document.createElementNS(svg.namespaceURI,'path');
-  path.setAttribute('d',sculptedConnector(x,root.getBoundingClientRect().bottom-base.top+1,xs,targets[0].getBoundingClientRect().top-base.top-1,bus));
-  path.setAttribute('fill','none');path.setAttribute('stroke','#a4b3c3');path.setAttribute('stroke-width','2');svg.replaceChildren(path);
+  paintSculptedWires(svg,sculptedConnector(x,root.getBoundingClientRect().bottom-base.top+1,xs,targets[0].getBoundingClientRect().top-base.top-1,bus));
 }
 const mode=new URLSearchParams(location.search).get('view');
 const controls=document.createElement('nav');controls.className='draft-controls';main.prepend(controls);
 for(const [key,label] of [['','Основная штатка'],['platonov','Предложенная штатка'],['compare','Смешанная']]){
-  const link=controls.appendChild(document.createElement('a'));link.href='?ui=tree-center3'+(key?'&view='+key:'');
+  const link=controls.appendChild(document.createElement('a'));link.href='?ui=grey-relief4'+(key?'&view='+key:'');
   link.textContent=label;if((mode||'')===key)link.setAttribute('aria-current','page');
 }
 function element(parent,tag,value){
@@ -342,10 +351,7 @@ if(mode==='compare'||mode==='platonov'){
     const center=el=>{const r=el.getBoundingClientRect();return r.left+r.width/2-bounds.left;};
     const xs=lanes.map(center);
     links.setAttribute('width',grid.scrollWidth);links.setAttribute('height',70);
-    const line=document.createElementNS(svg.namespaceURI,'path');
-    line.setAttribute('d',sculptedConnector(center(top),top.getBoundingClientRect().bottom-bounds.top+1,xs,67));
-    line.setAttribute('fill','none');line.setAttribute('stroke','#a4b3c3');line.setAttribute('stroke-width','2');
-    links.replaceChildren(line);
+    paintSculptedWires(links,sculptedConnector(center(top),top.getBoundingClientRect().bottom-bounds.top+1,xs,67));
   }
   const setRoot=fold(top,grid,chief.title);
   branchesUI.unshift(branchesUI.pop());

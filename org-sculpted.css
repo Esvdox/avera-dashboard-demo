@@ -252,3 +252,41 @@ main .card .icon path{stroke-width:2}
  main>h1,main.view>h1[hidden]{font-size:60.5px;padding-top:6px;padding-bottom:18px}
  main>h1 span{transform:translateY(6px)}
 }
+/* Grey palette restored; connector and controls follow the approved relief reference. */
+:root{
+ --staff-canvas:#e4e9f0;
+ --staff-surface:linear-gradient(135deg,#f4f7fb 0%,#e5eaf1 52%,#d6dee8 100%);
+ --staff-ink:#354658;
+ --staff-muted:#526274;
+ --staff-raised:inset 2px 3px 2px #fff,inset -2px -3px 3px #99a8bb66,0 4px 2px #78889d55,0 16px 19px #62738b44;
+ --staff-small:inset 2px 3px 2px #fff,inset -1px -2px 2px #98a8bc80,0 3px 1px #899aaf55,0 9px 11px #62738b38;
+}
+main,main.view{background:radial-gradient(ellipse at 50% 0,#f7faff60,transparent 900px)}
+main>h1,main.view>h1[hidden],main .card,main .card:not(.proposed):not(.new-staff),main.view .draft-grid .card,main.view .reporting-root,main .staff-counts>div,main .draft-controls a,.export-actions button{border-color:#f7faff}
+main>h1 span,main .card .unit-count{color:#58697d}
+main .card .budget{border-top-color:#aab7c780}
+main .card.root>div{border-left-color:#aab7c780}
+main .card .icon{background:linear-gradient(135deg,#edf2f7,#d4dce6);border-color:#f8fbff;color:#788697;box-shadow:inset 2px 3px 2px #fff,inset -2px -2px 2px #96a5b799,0 3px 2px #7c8da555,0 6px 7px #596b8440}
+main .card .icon path{filter:drop-shadow(1px 1px 0 #fff) drop-shadow(-.5px -.5px .3px #63738b)}
+main .card .assigned-person,main .card select,main.view .draft-grid .card select{border-color:#f5f8fc}
+main .card select option{background:#e4e9f0}
+main .chart-viewport{scrollbar-color:#9baebf #d9e1eb}
+main .wires path{filter:none;stroke-linecap:round;stroke-linejoin:round}
+main .wires .wire-shadow{stroke:#668c7566;stroke-width:8;transform:translateY(2px);filter:blur(1.2px)}
+main .wires .wire-body{stroke:#8dbb9c;stroke-width:7}
+main .wires .wire-face{stroke:#b6e2c3;stroke-width:4.5}
+main .wires .wire-highlight{stroke:#effff0;stroke-width:1.5;transform:translate(-1px,-1px)}
+main .node>.card::before,main .root::after{
+ background:radial-gradient(ellipse at 35% 18%,#e4f9e6 0%,#c2e8cc 35%,#9acbaa 72%,#84b596 100%);
+ border:1px solid #e8f8ed;box-shadow:inset 0 1px 1px #fff,0 2px 2px #66887688;
+}
+main .fold,main .fold[aria-expanded=false]{
+ background:radial-gradient(ellipse at 30% 18%,#f0fff0 0%,#d4efd7 28%,#b8dfc3 64%,#91c4a4 100%);
+ border:1px solid #edfff0;color:#3b6650;
+ box-shadow:inset 0 2px 1px #fff,inset 0 -2px 2px #78ab8c88,0 2px 1px #68867266,0 5px 6px #5b79654d;
+ font-weight:500;text-shadow:0 1px #fff;font-family:Arial,sans-serif;
+}
+main .fold::before{content:"";position:absolute;left:25%;right:25%;top:50%;height:2px;border-radius:2px;background:#426b53;box-shadow:0 1px #fafff6;transform:translateY(-50%);pointer-events:none}
+main .fold[aria-expanded=false]::before{background:linear-gradient(#426b53,#426b53) center/100% 2px no-repeat,linear-gradient(#426b53,#426b53) center/2px 100% no-repeat;height:50%;box-shadow:none}
+main .fold,main .fold[aria-expanded=false]{font-size:0}
+@media(min-width:701px){main .root::after{display:none}}
