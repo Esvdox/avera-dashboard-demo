@@ -176,7 +176,7 @@ main .children>.node>.card::before{width:16px;height:16px;top:calc(50% - 8px);le
  main .card.root .budget-value{font-size:30px;line-height:1.2;margin-top:3px}
  main .card.root .unit-count{position:absolute;bottom:9px;right:24px;font-size:10px}
  main .card.root>.fold{width:40px;height:40px;font-size:28px;top:12px;right:12px}
- main .tree,main.view .draft-grid{width:max-content;min-width:0;max-width:none;grid-template-columns:repeat(6,354px);gap:22px;padding:70px 0 12px;margin:0}
+ main .tree,main.view .draft-grid{width:max-content;min-width:0;max-width:none;grid-template-columns:repeat(6,354px);gap:22px;padding:70px 0 12px;margin:0 auto}
  main.view .draft-grid{grid-template-columns:repeat(9,354px)}
  main .tree>.lane>.node>.card,main.view .draft-grid>div>.node>.card{min-height:160px;padding:18px 16px;border-radius:26px;gap:15px;align-items:center}
  main .tree>.lane>.node>.card>div,main.view .draft-grid>div>.node>.card>div{flex:1}
