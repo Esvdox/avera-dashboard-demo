@@ -963,6 +963,13 @@ window.AVERA_OVERVIEW_SERIES = {
       "06.11.2026",
       "",
       false
+    ],
+    [
+      "2026-11-20",
+      98.0,
+      "20.11.2026",
+      "",
+      false
     ]
   ],
   "occupied": [
@@ -977,6 +984,13 @@ window.AVERA_OVERVIEW_SERIES = {
       "2026-11-06",
       65.46,
       "06.11.2026",
+      "",
+      false
+    ],
+    [
+      "2026-11-20",
+      66.46,
+      "20.11.2026",
       "",
       false
     ]
@@ -2147,5 +2161,469 @@ window.AVERA_OVERVIEW_SERIES = {
         0.11837864740975075
       ]
     ]
-  }
+  },
+  "staffingSnapshots": [
+    {
+      "date": "2026-10-16",
+      "source": "Штатная_расстановка_ООО_Лабораттория_на_16_10_2026г.xlsx",
+      "sha256": "62ee9e11ad8d61821d0fd76d6fbb3a34ea812754fb5d70255fcd3e519858d861",
+      "planned": 88.5,
+      "occupied": 58.46,
+      "vacant": 30.04,
+      "scheduledPayroll": 13286075.6,
+      "occupiedPayroll": null,
+      "vacantPayroll": null,
+      "departments": [
+        {
+          "name": "Дирекция",
+          "planned": 4.5,
+          "occupied": 2.71,
+          "vacant": 1.79,
+          "scheduledPayroll": 1563975.5,
+          "occupiedPayroll": null,
+          "vacantPayroll": null
+        },
+        {
+          "name": "Отдел продаж и маркетинга",
+          "planned": 3.0,
+          "occupied": 2.0,
+          "vacant": 1.0,
+          "scheduledPayroll": 402301.0,
+          "occupiedPayroll": null,
+          "vacantPayroll": null
+        },
+        {
+          "name": "Отдел кадров",
+          "planned": 1.5,
+          "occupied": 1.5,
+          "vacant": 0.0,
+          "scheduledPayroll": 129943.0,
+          "occupiedPayroll": null,
+          "vacantPayroll": null
+        },
+        {
+          "name": "Конструкторско-технологический отдел",
+          "planned": 9.0,
+          "occupied": 5.75,
+          "vacant": 3.25,
+          "scheduledPayroll": 1530689.0,
+          "occupiedPayroll": null,
+          "vacantPayroll": null
+        },
+        {
+          "name": "Отдел закупок",
+          "planned": 2.0,
+          "occupied": 1.0,
+          "vacant": 1.0,
+          "scheduledPayroll": 229932.0,
+          "occupiedPayroll": null,
+          "vacantPayroll": null
+        },
+        {
+          "name": "Отдел технического контроля",
+          "planned": 3.0,
+          "occupied": 1.0,
+          "vacant": 2.0,
+          "scheduledPayroll": 321887.0,
+          "occupiedPayroll": null,
+          "vacantPayroll": null
+        },
+        {
+          "name": "Бухгалтерия",
+          "planned": 4.0,
+          "occupied": 3.0,
+          "vacant": 1.0,
+          "scheduledPayroll": 609199.0,
+          "occupiedPayroll": null,
+          "vacantPayroll": null
+        },
+        {
+          "name": "Администрация",
+          "planned": 1.0,
+          "occupied": 1.0,
+          "vacant": 0.0,
+          "scheduledPayroll": 91955.0,
+          "occupiedPayroll": null,
+          "vacantPayroll": null
+        },
+        {
+          "name": "Производство",
+          "planned": 9.0,
+          "occupied": 6.0,
+          "vacant": 3.0,
+          "scheduledPayroll": 1459807.0,
+          "occupiedPayroll": null,
+          "vacantPayroll": null
+        },
+        {
+          "name": "Механический цех",
+          "planned": 29.5,
+          "occupied": 20.0,
+          "vacant": 9.5,
+          "scheduledPayroll": 3597961.5,
+          "occupiedPayroll": null,
+          "vacantPayroll": null
+        },
+        {
+          "name": "Сварочный цех",
+          "planned": 14.0,
+          "occupied": 11.0,
+          "vacant": 3.0,
+          "scheduledPayroll": 2251607.6,
+          "occupiedPayroll": null,
+          "vacantPayroll": null
+        },
+        {
+          "name": "Окрасочный цех",
+          "planned": 2.0,
+          "occupied": 0.0,
+          "vacant": 2.0,
+          "scheduledPayroll": 229886.0,
+          "occupiedPayroll": null,
+          "vacantPayroll": null
+        },
+        {
+          "name": "Формовочный цех",
+          "planned": 3.0,
+          "occupied": 2.0,
+          "vacant": 1.0,
+          "scheduledPayroll": 510608.0,
+          "occupiedPayroll": null,
+          "vacantPayroll": null
+        },
+        {
+          "name": "Склад",
+          "planned": 2.0,
+          "occupied": 1.0,
+          "vacant": 1.0,
+          "scheduledPayroll": 183910.0,
+          "occupiedPayroll": null,
+          "vacantPayroll": null
+        },
+        {
+          "name": "Отдел охраны труда",
+          "planned": 1.0,
+          "occupied": 0.5,
+          "vacant": 0.5,
+          "scheduledPayroll": 172414.0,
+          "occupiedPayroll": null,
+          "vacantPayroll": null
+        }
+      ]
+    },
+    {
+      "date": "2026-11-06",
+      "source": "Штатная расстановка ООО Лабораттория от 06.11.2026 г..xlsx",
+      "sha256": "1c946665a9047ce2664d17a393fb304b10399b5d76a3bfb83292b784165fdbe8",
+      "planned": 96.0,
+      "occupied": 65.46,
+      "vacant": 30.54,
+      "scheduledPayroll": 14249884.88,
+      "occupiedPayroll": 10370714.75,
+      "vacantPayroll": 3879170.13,
+      "departments": [
+        {
+          "name": "Дирекция",
+          "planned": 4.5,
+          "occupied": 3.71,
+          "vacant": 0.79,
+          "scheduledPayroll": 1701975.5,
+          "occupiedPayroll": 1543975.5,
+          "vacantPayroll": 158000.0
+        },
+        {
+          "name": "Отдел продаж и маркетинга",
+          "planned": 3.0,
+          "occupied": 2.0,
+          "vacant": 1.0,
+          "scheduledPayroll": 402301.0,
+          "occupiedPayroll": 264369.0,
+          "vacantPayroll": 137932.0
+        },
+        {
+          "name": "Отдел кадров",
+          "planned": 1.5,
+          "occupied": 1.5,
+          "vacant": 0.0,
+          "scheduledPayroll": 129943.0,
+          "occupiedPayroll": 129943.0,
+          "vacantPayroll": 0.0
+        },
+        {
+          "name": "Конструкторско-технологический отдел",
+          "planned": 9.0,
+          "occupied": 6.75,
+          "vacant": 2.25,
+          "scheduledPayroll": 1530689.0,
+          "occupiedPayroll": 1201185.25,
+          "vacantPayroll": 329503.75
+        },
+        {
+          "name": "Отдел закупок",
+          "planned": 2.0,
+          "occupied": 1.0,
+          "vacant": 1.0,
+          "scheduledPayroll": 229932.0,
+          "occupiedPayroll": 137932.0,
+          "vacantPayroll": 92000.0
+        },
+        {
+          "name": "Отдел технического контроля",
+          "planned": 3.0,
+          "occupied": 1.0,
+          "vacant": 2.0,
+          "scheduledPayroll": 321887.0,
+          "occupiedPayroll": 92000.0,
+          "vacantPayroll": 229887.0
+        },
+        {
+          "name": "Бухгалтерия",
+          "planned": 4.0,
+          "occupied": 3.0,
+          "vacant": 1.0,
+          "scheduledPayroll": 609199.0,
+          "occupiedPayroll": 436784.0,
+          "vacantPayroll": 172415.0
+        },
+        {
+          "name": "Администрация",
+          "planned": 1.0,
+          "occupied": 0.0,
+          "vacant": 1.0,
+          "scheduledPayroll": 91955.0,
+          "occupiedPayroll": 0.0,
+          "vacantPayroll": 91955.0
+        },
+        {
+          "name": "Производство",
+          "planned": 10.0,
+          "occupied": 7.0,
+          "vacant": 3.0,
+          "scheduledPayroll": 1551762.0,
+          "occupiedPayroll": 1091957.0,
+          "vacantPayroll": 459805.0
+        },
+        {
+          "name": "Механический цех",
+          "planned": 33.5,
+          "occupied": 24.0,
+          "vacant": 9.5,
+          "scheduledPayroll": 4138192.5,
+          "occupiedPayroll": 3057502.0,
+          "vacantPayroll": 1080690.5
+        },
+        {
+          "name": "Сварочный цех",
+          "planned": 14.0,
+          "occupied": 10.0,
+          "vacant": 4.0,
+          "scheduledPayroll": 2252924.88,
+          "occupiedPayroll": 1667174.0,
+          "vacantPayroll": 585750.88
+        },
+        {
+          "name": "Окрасочный цех",
+          "planned": 2.0,
+          "occupied": 0.0,
+          "vacant": 2.0,
+          "scheduledPayroll": 229886.0,
+          "occupiedPayroll": 0.0,
+          "vacantPayroll": 229886.0
+        },
+        {
+          "name": "Формовочный цех",
+          "planned": 5.0,
+          "occupied": 4.0,
+          "vacant": 1.0,
+          "scheduledPayroll": 687914.0,
+          "occupiedPayroll": 569731.0,
+          "vacantPayroll": 118183.0
+        },
+        {
+          "name": "Склад",
+          "planned": 2.0,
+          "occupied": 1.0,
+          "vacant": 1.0,
+          "scheduledPayroll": 183910.0,
+          "occupiedPayroll": 91955.0,
+          "vacantPayroll": 91955.0
+        },
+        {
+          "name": "Отдел охраны труда",
+          "planned": 1.0,
+          "occupied": 0.5,
+          "vacant": 0.5,
+          "scheduledPayroll": 172414.0,
+          "occupiedPayroll": 86207.0,
+          "vacantPayroll": 86207.0
+        },
+        {
+          "name": "Энергетическая служба",
+          "planned": 0.5,
+          "occupied": 0.0,
+          "vacant": 0.5,
+          "scheduledPayroll": 15000.0,
+          "occupiedPayroll": 0.0,
+          "vacantPayroll": 15000.0
+        }
+      ]
+    },
+    {
+      "date": "2026-11-20",
+      "source": "Штатная_расстановка 20.11.2026.xlsx",
+      "sha256": "fd634926c3e23fb1bd74c7405e7022c3484b15ba5ede17988b2fec407ca3c13b",
+      "planned": 98.0,
+      "occupied": 66.46,
+      "vacant": 31.54,
+      "scheduledPayroll": 14525748.88,
+      "occupiedPayroll": 10488868.75,
+      "vacantPayroll": 4036880.13,
+      "departments": [
+        {
+          "name": "Дирекция",
+          "planned": 4.5,
+          "occupied": 3.71,
+          "vacant": 0.79,
+          "scheduledPayroll": 1701975.5,
+          "occupiedPayroll": 1543975.5,
+          "vacantPayroll": 158000.0
+        },
+        {
+          "name": "Отдел продаж и маркетинга",
+          "planned": 3.0,
+          "occupied": 2.0,
+          "vacant": 1.0,
+          "scheduledPayroll": 402301.0,
+          "occupiedPayroll": 264369.0,
+          "vacantPayroll": 137932.0
+        },
+        {
+          "name": "Отдел кадров",
+          "planned": 1.5,
+          "occupied": 1.5,
+          "vacant": 0.0,
+          "scheduledPayroll": 129943.0,
+          "occupiedPayroll": 129943.0,
+          "vacantPayroll": 0.0
+        },
+        {
+          "name": "Конструкторско-технологический отдел",
+          "planned": 9.0,
+          "occupied": 5.75,
+          "vacant": 3.25,
+          "scheduledPayroll": 1530689.0,
+          "occupiedPayroll": 1040235.25,
+          "vacantPayroll": 490453.75
+        },
+        {
+          "name": "Отдел закупок",
+          "planned": 2.0,
+          "occupied": 1.0,
+          "vacant": 1.0,
+          "scheduledPayroll": 229932.0,
+          "occupiedPayroll": 137932.0,
+          "vacantPayroll": 92000.0
+        },
+        {
+          "name": "Отдел технического контроля",
+          "planned": 3.0,
+          "occupied": 1.0,
+          "vacant": 2.0,
+          "scheduledPayroll": 321887.0,
+          "occupiedPayroll": 92000.0,
+          "vacantPayroll": 229887.0
+        },
+        {
+          "name": "Бухгалтерия",
+          "planned": 4.0,
+          "occupied": 3.0,
+          "vacant": 1.0,
+          "scheduledPayroll": 609199.0,
+          "occupiedPayroll": 436784.0,
+          "vacantPayroll": 172415.0
+        },
+        {
+          "name": "Администрация",
+          "planned": 1.0,
+          "occupied": 0.0,
+          "vacant": 1.0,
+          "scheduledPayroll": 91955.0,
+          "occupiedPayroll": 0.0,
+          "vacantPayroll": 91955.0
+        },
+        {
+          "name": "Производство",
+          "planned": 11.0,
+          "occupied": 8.0,
+          "vacant": 3.0,
+          "scheduledPayroll": 1689694.0,
+          "occupiedPayroll": 1229889.0,
+          "vacantPayroll": 459805.0
+        },
+        {
+          "name": "Механический цех",
+          "planned": 33.5,
+          "occupied": 23.0,
+          "vacant": 10.5,
+          "scheduledPayroll": 4138192.5,
+          "occupiedPayroll": 2942559.0,
+          "vacantPayroll": 1195633.5
+        },
+        {
+          "name": "Сварочный цех",
+          "planned": 14.0,
+          "occupied": 10.0,
+          "vacant": 4.0,
+          "scheduledPayroll": 2252924.88,
+          "occupiedPayroll": 1667174.0,
+          "vacantPayroll": 585750.88
+        },
+        {
+          "name": "Окрасочный цех",
+          "planned": 2.0,
+          "occupied": 0.0,
+          "vacant": 2.0,
+          "scheduledPayroll": 229886.0,
+          "occupiedPayroll": 0.0,
+          "vacantPayroll": 229886.0
+        },
+        {
+          "name": "Формовочный цех",
+          "planned": 6.0,
+          "occupied": 6.0,
+          "vacant": 0.0,
+          "scheduledPayroll": 825846.0,
+          "occupiedPayroll": 825846.0,
+          "vacantPayroll": 0.0
+        },
+        {
+          "name": "Склад",
+          "planned": 2.0,
+          "occupied": 1.0,
+          "vacant": 1.0,
+          "scheduledPayroll": 183910.0,
+          "occupiedPayroll": 91955.0,
+          "vacantPayroll": 91955.0
+        },
+        {
+          "name": "Отдел охраны труда",
+          "planned": 1.0,
+          "occupied": 0.5,
+          "vacant": 0.5,
+          "scheduledPayroll": 172414.0,
+          "occupiedPayroll": 86207.0,
+          "vacantPayroll": 86207.0
+        },
+        {
+          "name": "Энергетическая служба",
+          "planned": 0.5,
+          "occupied": 0.0,
+          "vacant": 0.5,
+          "scheduledPayroll": 15000.0,
+          "occupiedPayroll": 0.0,
+          "vacantPayroll": 15000.0
+        }
+      ]
+    }
+  ]
 };

@@ -18,6 +18,7 @@ window.AVERA_SOURCE_STATUS=()=>[
  ['Бухгалтерия',window.AVERA_ACCOUNTING?.asof||'НД',window.AVERA_ACCOUNTING?.updated||'НД','Ручной снимок PDF; автоимпорта нет'],
  ['Основные средства',window.AVERA_FIXED_ASSETS?.asOf||'НД','02.11.2026','Ручной снимок ведомости; автоимпорта нет'],
  ['Кадры', '2024–2026; события по 02.11.2026',window.AVERA_HR_TURNOVER?.updated||'НД','Снимки отчётов 1С; прямого подключения нет'],
+ ['Штатная расстановка',window.AVERA_OVERVIEW_SERIES?.staffingSnapshots?.at(-1)?.date||'НД','20.11.2026','Агрегаты XLSX; ставки и плановый ФОТ сверены'],
  ['Гант Завод',window.AVERA_PRODUCTION_SNAPSHOT?.asOf||'НД',window.AVERA_PRODUCTION_SNAPSHOT?.asOf||'НД','Сохранённый срез; регулярное чтение не настроено'],
  ['Битрикс24','НД','НД','Актуальный срез не загружен'],
  ['Продукты и КБ','НД','НД','Подтверждённый реестр не загружен']

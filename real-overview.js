@@ -391,6 +391,30 @@ function teamCard() {
     note:'2024–2025 — средняя численность. С 16.10.2026 сплошная — всего ставок, пунктир — занято.'});
 }
 
+window.renderStaffingSnapshot = function () {
+  const snapshots = window.AVERA_OVERVIEW_SERIES.staffingSnapshots || [];
+  const latest = snapshots.at(-1);
+  if (!latest) return '';
+  const previous = snapshots.at(-2);
+  const stamp = value => value.split('-').reverse().join('.');
+  const signed = value => (value > 0 ? '+' : value < 0 ? '−' : '') + fmt(Math.abs(value));
+  const delta = key => previous ? signed(latest[key] - previous[key]) + ' к ' + stamp(previous.date) : 'Первый срез';
+  const money = value => Number.isFinite(value) ? fmt(value / 1000000) + ' млн ₽' : 'НД';
+  const prior = new Map((previous?.departments || []).map(row => [row.name, row]));
+  return panel('Штатная расстановка · ' + stamp(latest.date),
+    summary([
+      ['Всего ставок',fmt(latest.planned),delta('planned')],
+      ['Занято ставок',fmt(latest.occupied),delta('occupied')],
+      ['Свободно ставок',fmt(latest.vacant),delta('vacant')],
+      ['Плановый ФОТ',money(latest.scheduledPayroll),previous ? signed((latest.scheduledPayroll - previous.scheduledPayroll) / 1000000) + ' млн ₽ к ' + stamp(previous.date) : 'Первый срез']
+    ]) + '<p class="hint">Ставки учитывают доли занятости; это не число сотрудников. Плановый ФОТ — сумма из штатной расстановки, не фактические начисления. ФОТ занятых ставок: ' + money(latest.occupiedPayroll) + '; свободных: ' + money(latest.vacantPayroll) + '.</p>') +
+    panel('История штатной расстановки',table(['Дата','Всего ставок','Занято','Свободно','Плановый ФОТ, млн ₽'],
+      snapshots.map(row => [stamp(row.date),fmt(row.planned),fmt(row.occupied),fmt(row.vacant),fmt(row.scheduledPayroll / 1000000)]))) +
+    panel('Занятость по подразделениям · ' + stamp(latest.date),table(['Подразделение','Всего ставок','Занято','Свободно','Изменение занятых к ' + (previous ? stamp(previous.date) : 'первому срезу')],
+      latest.departments.map(row => [safe(row.name),fmt(row.planned),fmt(row.occupied),fmt(row.vacant),prior.has(row.name) ? signed(row.occupied - prior.get(row.name).occupied) : 'НД']))) +
+    '<p class="hint">Источник: ' + safe(latest.source) + '. Итоги ставок и планового ФОТ сверены с итоговой строкой отчёта.</p>';
+};
+
 window.ownerOverview = function () {
   const {from, to} = overviewRange;
   const controls = '<div class="panel cmp-controls" aria-label="Единый период обзора"><div class="cmp-dates">' +
@@ -445,6 +469,12 @@ renderers.products=()=>panel('Продукты и КБ · нет подтвер�
 function labels(){document.querySelector("main").classList.toggle("av-overview-type",current==="overview");const message={overview:'Фактические источники с отдельными датами. Автоматическое получение новых данных не настроено.',finance:'Фактическая бухгалтерская отчётность. Загрузка PDF вручную; карточки и таблицы используют один набор. Прямого подключения к 1С нет.',assets:'Фактическая ведомость ОС. Итоги пересчитываются из строк, расхождения со строкой «Итого» источника показаны отдельно. Автоимпорта нет.',people:'Фактические снимки кадровых отчётов 1С. События, текучесть и средняя численность — отдельные показатели. Автоимпорта нет.',production:'Сохранённый срез «Гант Завод». Показатели рассчитаны из записей; регулярное чтение источника пока не настроено.',sales:'Актуальный срез Битрикс24 не загружен. Демонстрационные суммы в реальной версии скрыты.',products:'Подтверждённый реестр продуктов и КД не загружен. Демонстрационные статусы и количества скрыты.'};document.querySelector('main > .notice').textContent=message[current]||'Нет данных';if(['overview','production'].includes(current))document.querySelector('.asof').innerHTML='<strong>2 ноября 2026</strong><span>Периоды указаны у каждого показателя</span>';if(['sales','products'].includes(current))document.querySelector('.asof').innerHTML='<strong>Нет подтверждённого среза</strong><span>НД — не ноль</span>';if(current==='production'){$('#subtitle').textContent='Фактический срез «Гант Завод» · календарные сигналы и качество данных';}}
 window.applyActualLabels=function(){
   labels();
+  if(current==='people'){
+    $('#title').textContent='Люди и ФОТ';
+    $('#subtitle').textContent='Штатная расстановка и ретроспектива кадровых событий';
+    const latest = window.AVERA_OVERVIEW_SERIES.staffingSnapshots?.at(-1);
+    if(latest) document.querySelector('.asof').innerHTML='<strong>Штат · ' + safe(latest.date.split('-').reverse().join('.')) + '</strong><span>Кадровые события · по 02.11.2026</span>';
+  }
   if(current==='overview'){
     $('#title').textContent='Сводка по компании';
     $('#subtitle').textContent='';
