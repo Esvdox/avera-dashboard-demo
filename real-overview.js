@@ -449,14 +449,12 @@ window.ownerOverview = function () {
   if (!from || !to || from > to) return controls + '<p class="av-muted">Укажите корректный диапазон дат.</p>';
   const contracts = seriesPoints('contractDates', 'шт.');
   const statusVisible = dateInRange('2026-11-09');
-  const production = (window.AVERA_OVERVIEW_SERIES.productionSnapshots || []).filter(item => dateInRange(item.asOf)).at(-1);
   const sections = [
     ['Финансовый результат',[financeCard('revenue','Выручка','wallet'),financeCard('profit','Чистая прибыль','trend'),
       cashMovementCard()]],
     ['Продажи',[salesCard(contracts),statusCard('sales','На подписании',statusVisible ? '1 договор · 3 крупных продукта' : 'НД',
       statusVisible ? 'Оперативный срез на 09.11.2026 · сумма и дата подписания уточняются' : 'Нет среза в выбранном периоде','sales')]],
-    ['Исполнение заказа',[statusCard('sales','Заказ в работе',production ? fmt(production.inProgress) + ' аттракционов' : statusVisible ? '1 крупный заказ' : 'НД',
-      production ? fmt(production.completed) + ' изготовлено · по проценту выполнения на ' + production.asOf.split('-').reverse().join('.') : statusVisible ? 'Оперативный срез на 09.11.2026 · ближайшая отгрузка и готовность КД уточняются' : 'Нет среза в выбранном периоде','production')]],
+    ['Исполнение заказа',[window.renderOrderExecution(dateInRange)]],
     ['Маржа',[marginCard()]],
     ['Деньги и обязательства',[balanceCard(),loanCard()]],
     ['Продуктовый портфель',[productsCard()]],
