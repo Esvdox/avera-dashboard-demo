@@ -326,14 +326,15 @@ function marginChange(snapshot) {
 }
 
 function marginCard() {
-  const snapshot = window.AVERA_OVERVIEW_SERIES.contractAnalysisSnapshot;
+  const history = window.AVERA_OVERVIEW_SERIES.contractAnalysisSnapshots || [window.AVERA_OVERVIEW_SERIES.contractAnalysisSnapshot];
+  const snapshot = history.filter(item => item && dateInRange(item.asOf)).at(-1);
   const rows = snapshot?.positions || [];
   const points = rows.map(([price], i) => ['Позиция №' + (i + 1), price / 1e6, i + 1]);
   const secondary = rows.map(([, rate], i) => ['Позиция №' + (i + 1), rate * 100, i + 1]);
   const label = 'Стоимость и рентабельность договоров';
   const value = 'Взвешенная рентабельность — ' + (rows.length ? fmt(snapshot.weightedRate * 100) + '%' : 'НД');
-  const arrivalSnapshot = snapshot?.asOf === arrivalDay
-    ? `<span><i class="av-arrival-key" aria-hidden="true"></i>Срез на дату прихода · ${arrivalDateLabel}</span>`
+  const arrivalSnapshot = history.some(item => item?.asOf === arrivalDay)
+    ? `<span><i class="av-arrival-key" aria-hidden="true"></i>${snapshot?.asOf === arrivalDay ? 'Срез на дату прихода' : 'База сравнения'} · ${arrivalDateLabel}</span>`
     : '';
   const legend = rows.length ? `<div class="av-chart-legend av-margin-legend">
     <span><i aria-hidden="true"></i>Стоимость с НДС, млн ₽</span>
@@ -432,13 +433,14 @@ window.ownerOverview = function () {
   if (!from || !to || from > to) return controls + '<p class="av-muted">Укажите корректный диапазон дат.</p>';
   const contracts = seriesPoints('contractDates', 'шт.');
   const statusVisible = dateInRange('2026-11-09');
+  const production = (window.AVERA_OVERVIEW_SERIES.productionSnapshots || []).filter(item => dateInRange(item.asOf)).at(-1);
   const sections = [
     ['Финансовый результат',[financeCard('revenue','Выручка','wallet'),financeCard('profit','Чистая прибыль','trend'),
       cashMovementCard()]],
     ['Продажи',[salesCard(contracts),statusCard('sales','На подписании',statusVisible ? '1 договор · 3 крупных продукта' : 'НД',
       statusVisible ? 'Оперативный срез на 09.11.2026 · сумма и дата подписания уточняются' : 'Нет среза в выбранном периоде','sales')]],
-    ['Исполнение заказа',[statusCard('sales','Заказ в работе',statusVisible ? '1 крупный заказ' : 'НД',
-      statusVisible ? 'Оперативный срез на 09.11.2026 · ближайшая отгрузка и готовность КД уточняются' : 'Нет среза в выбранном периоде','production')]],
+    ['Исполнение заказа',[statusCard('sales','Заказ в работе',production ? fmt(production.inProgress) + ' аттракционов' : statusVisible ? '1 крупный заказ' : 'НД',
+      production ? fmt(production.completed) + ' изготовлено · по проценту выполнения на ' + production.asOf.split('-').reverse().join('.') : statusVisible ? 'Оперативный срез на 09.11.2026 · ближайшая отгрузка и готовность КД уточняются' : 'Нет среза в выбранном периоде','production')]],
     ['Маржа',[marginCard()]],
     ['Деньги и обязательства',[balanceCard(),loanCard()]],
     ['Продуктовый портфель',[productsCard()]],
