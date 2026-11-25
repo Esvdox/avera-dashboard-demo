@@ -95,3 +95,23 @@
 #avera-owner .av-range-presets button{min-height:34px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;cursor:pointer}
 #avera-owner .av-range-presets button[aria-pressed=true]{color:var(--accent);background:var(--tint);border-color:var(--accent)}
 @media(pointer:coarse){#avera-owner .av-range-presets button{min-height:40px}}
+#avera-owner .av-range-bar,#avera-owner .av-range-presets{justify-content:center}
+#avera-owner .av-range-date{position:relative;display:inline-flex;align-items:center;justify-content:center;width:110px;max-width:100%;min-height:34px;padding:4px 17px;border:1px solid var(--input-border);border-radius:var(--radius-input);background:var(--input-background);color:var(--text);font:inherit;cursor:pointer;font-variant-numeric:tabular-nums}
+#avera-owner .av-range-date svg{position:absolute;right:5px;width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.6}
+#avera-owner .av-range-calendar{width:min(318px,calc(100% - 20px));margin:auto;padding:14px;max-height:calc(100dvh - 24px);overflow:auto}
+#avera-owner .av-range-calendar h2{text-align:center;font-size:16px;margin:0 0 12px}
+#avera-owner .av-range-calendar :is(button,input,select){box-sizing:border-box;font:inherit;font-size:14px;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:8px;min-width:0}
+#avera-owner .av-range-calendar button{cursor:pointer;padding:0 5px;min-height:34px}
+#avera-owner .av-range-calendar button:disabled{opacity:.35;cursor:default}
+#avera-owner .av-calendar-nav{display:grid;align-items:center;grid-template-columns:32px 1fr 66px 32px;gap:5px;margin-bottom:8px}
+#avera-owner .av-calendar-nav :is(select,input){width:100%;min-height:34px;padding:3px}
+#avera-owner .av-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;text-align:center}
+#avera-owner .av-weekdays{color:var(--muted);font-size:12px;padding:4px 0}
+#avera-owner .av-days button{border-color:transparent}
+#avera-owner .av-days button:hover:not(:disabled){background:var(--tint);color:var(--accent)}
+#avera-owner .av-calendar-actions{display:flex;gap:6px;align-items:center;justify-content:flex-end;border-top:1px solid var(--line);margin-top:10px;padding-top:10px}
+#avera-owner .av-calendar-actions button{padding-inline:11px}
+#avera-owner .av-calendar-actions [data-today]{margin-right:auto}
+#avera-owner .av-days button[aria-pressed=true],#avera-owner .av-days button[aria-pressed=true]:hover,#avera-owner .av-calendar-actions [data-ok]{background:var(--accent);color:var(--button-text);border-color:var(--accent)}
+#avera-owner .av-range-calendar :focus-visible,#avera-owner .av-range-date:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+@media(pointer:coarse){#avera-owner .av-range-date,#avera-owner .av-range-calendar button{min-height:40px}}

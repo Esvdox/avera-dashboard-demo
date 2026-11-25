@@ -464,10 +464,9 @@ window.ownerOverview = function () {
       const shortDate = value ? value.split('-').reverse().join('.') : 'дд.мм.гггг';
       return `<div class="cmp-date-field">
         <label for="av-overview-${key}">${label}</label>
-        <div class="cmp-date-input">
-          <span class="cmp-date-value" aria-hidden="true">${safe(shortDate)}</span>
-          <input type="date" id="av-overview-${key}" data-overview-date="${key}" value="${safe(value)}">
-        </div>
+        <button type="button" class="av-range-date" id="av-overview-${key}" data-overview-date="${key}" aria-haspopup="dialog" aria-label="${label} · ${safe(shortDate)}">
+          ${safe(shortDate)}<svg aria-hidden="true" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 7h12M5 1v4m6-4v4"/></svg>
+        </button>
       </div>`;
     }).join('') + '</div><div class="av-range-presets" role="group" aria-label="Быстрый выбор периода">' +
     periods.map((p,i) => `<button type="button" data-period-index="${i}" aria-pressed="${from === p.from && to === p.to}">${p.label}</button>`).join('') +
@@ -498,12 +497,84 @@ $('#content').addEventListener('click', event => {
   render();
   $('#content').querySelector(`[data-period-index="${button.dataset.periodIndex}"]`).focus({preventScroll:true});
 });
-$('#content').addEventListener('change', event=>{
-  const key = event.target.dataset.overviewDate;
-  if (!key || current !== 'overview') return;
-  overviewRange[key] = event.target.value;
-  render();
-  $('#av-overview-'+key).focus();
+
+function openRangeCalendar(key) {
+  const dialog = document.createElement('dialog');
+  dialog.className = 'av-range-calendar';
+  dialog.setAttribute('aria-labelledby','av-calendar-title');
+  const label = key === 'from' ? 'Дата начала' : 'Дата окончания';
+  const today = fullRange.to;
+  let draft = overviewRange[key];
+  let month = Number(draft.slice(5,7)) - 1;
+  let year = Number(draft.slice(0,4));
+  const months = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  dialog.innerHTML = `<h2 id="av-calendar-title">${label}</h2>
+    <div class="av-calendar-nav">
+      <button type="button" data-shift="-1" aria-label="Предыдущий месяц">‹</button>
+      <select aria-label="Месяц">${months.map((name,i)=>`<option value="${i}">${name}</option>`).join('')}</select>
+      <input type="number" min="1000" max="9999" aria-label="Год">
+      <button type="button" data-shift="1" aria-label="Следующий месяц">›</button>
+    </div>
+    <div class="av-calendar-grid av-weekdays" aria-hidden="true">${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(d=>'<span>'+d+'</span>').join('')}</div>
+    <div class="av-calendar-grid av-days" role="group" aria-label="День месяца"></div>
+    <div class="av-calendar-actions"><button type="button" data-today>Сегодня</button><button type="button" data-cancel>Отмена</button><button type="button" data-ok>ОК</button></div>`;
+  document.body.append(dialog);
+  const grid = dialog.querySelector('.av-days');
+  const monthField = dialog.querySelector('select');
+  const yearField = dialog.querySelector('input');
+  function draw() {
+    monthField.value = month;
+    yearField.value = year;
+    const offset = (new Date(Date.UTC(year,month,1)).getUTCDay()+6)%7;
+    const count = new Date(Date.UTC(year,month+1,0)).getUTCDate();
+    grid.innerHTML = Array.from({length:count},(_,i)=>{
+      const iso = new Date(Date.UTC(year,month,i+1)).toISOString().slice(0,10);
+      const outOfRange = key === 'from' ? iso > overviewRange.to : iso < overviewRange.from;
+      return `<button type="button" data-day="${iso}" aria-label="${iso.split('-').reverse().join('.')}" aria-pressed="${iso===draft}"
+        ${outOfRange?'disabled':''} ${i===0?'style="grid-column-start:'+(offset+1)+'"':''}>${i+1}</button>`;
+    }).join('');
+    dialog.querySelector('[data-today]').disabled = key==='from' ? today>overviewRange.to : today<overviewRange.from;
+    dialog.querySelector('[data-ok]').disabled = !draft;
+  }
+  function browse(nextYear,nextMonth) {
+    if(nextYear<1000 || nextYear>9999) return;
+    year=nextYear; month=nextMonth;
+    if(!draft.startsWith(String(year)+'-'+String(month+1).padStart(2,'0')+'-')) draft='';
+    draw();
+  }
+  monthField.onchange = ()=>browse(year,Number(monthField.value));
+  yearField.oninput = ()=>{
+    const value=yearField.valueAsNumber;
+    if(Number.isInteger(value) && value>=1000 && value<=9999) browse(value,month);
+    else { draft=''; dialog.querySelector('[data-ok]').disabled=true; }
+  };
+  dialog.addEventListener('click',event=>{
+    const button=event.target.closest('button');
+    if(!button || button.disabled)return;
+    if(button.hasAttribute('data-shift')){
+      const next=new Date(Date.UTC(year,month+Number(button.dataset.shift),1));
+      browse(next.getUTCFullYear(),next.getUTCMonth());
+    }else if(button.dataset.day || button.hasAttribute('data-today')){
+      draft=button.dataset.day || today;
+      year=Number(draft.slice(0,4)); month=Number(draft.slice(5,7))-1;
+      draw();
+      grid.querySelector('[aria-pressed="true"]')?.focus();
+    }else if(button.hasAttribute('data-ok') && draft){
+      overviewRange[key]=draft;
+      dialog.close(); render();
+    }else if(button.hasAttribute('data-cancel'))dialog.close();
+  });
+  dialog.addEventListener('close',()=>{
+    dialog.remove();
+    document.getElementById('av-overview-'+key)?.focus({preventScroll:true});
+  },{once:true});
+  draw(); dialog.showModal();
+  grid.querySelector('[aria-pressed="true"]')?.focus();
+}
+
+$('#content').addEventListener('click',event=>{
+  const field=event.target.closest('[data-overview-date]');
+  if(field && current==='overview')openRangeCalendar(field.dataset.overviewDate);
 });
 let overviewContentWidth = $('#content').clientWidth;
 new ResizeObserver(() => {

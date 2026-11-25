@@ -15,7 +15,10 @@ body#avera-owner{margin:0;font:var(--text-base)/1.45 var(--font-ui);background:v
 .av-header-date{padding:5px 12px;border:1px solid var(--line);border-radius:20px;font-size:12px;color:var(--muted);margin-left:auto;white-space:nowrap}
 .av-user{display:grid;place-items:center;width:34px;height:34px;background:var(--tint);color:var(--accent);border-radius:50%;font-size:13px;font-weight:700}
 .av-icon-button{display:grid;place-items:center;width:38px;height:38px;border:0;border-radius:50%;background:transparent;color:var(--muted)}
-#avera-owner .theme{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:12px;min-height:36px;padding:7px 11px;font-size:12px;background:var(--surface);color:var(--muted)}
+#avera-owner .theme{display:grid;place-items:center;width:38px;height:38px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--muted);cursor:pointer}
+#avera-owner .theme .av-icon{width:21px;height:21px}
+#avera-owner .theme:hover{background:var(--tint);color:var(--text)}
+#avera-owner .theme:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .av-sidebar{position:fixed;top:65px;left:0;bottom:0;width:216px;padding:24px 12px;background:var(--sidebar-background);color:var(--sidebar-text);display:flex;flex-direction:column;z-index:9}
 .av-sidebar-caption{font-size:11px;color:var(--sidebar-muted);padding:0 12px 18px}
 #avera-owner .av-sidebar nav,#avera-owner .av-menu-dialog nav{display:flex;flex-direction:column;gap:5px}
