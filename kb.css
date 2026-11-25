@@ -16,21 +16,29 @@ main:has(.kb-section) > .notice:empty { display:none }
 .kb-matrix tbody th,.kb-desktop thead tr:nth-child(2) th:first-child { text-align:left; padding-left:10px }
 .kb-matrix .kb-groups th,.kb-matrix .kb-band th { color:var(--muted); background:var(--tint); font-weight:600; border-right:1px solid var(--line) }
 .kb-desktop :is(th,td):is(:nth-child(3),:nth-child(4),:nth-child(7),:nth-child(12)){ border-left:1px solid var(--line) }
-.kb-name { width:13% } .kb-percent { width:5% }
-.kb-matrix .kb-pct { font-weight:650; white-space:nowrap }
+.kb-name { width:16% } .kb-percent { width:6% }
+.kb-matrix .kb-pct { color:var(--accent); font-size:13px; font-weight:650; white-space:nowrap }
 .kb-pct sup { color:var(--warn); font-size:9px }
 .kb-cell { display:grid; place-items:center; min-height:28px }
-.kb-note,.kb-details { font-size:12px; line-height:1.45; color:var(--muted) }
-.kb-note { margin:9px 0 15px }
+.kb-details { font-size:12px; line-height:1.45; color:var(--muted) }
+.kb-details { margin-top:12px }
 .kb-details summary { cursor:pointer; color:var(--accent); width:fit-content }
 .kb-details p { max-width:85ch }
 .kb-matrix .kb-mobile { display:none }
-@container (max-width: 980px) {
+@media (min-width:761px) {
+  .kb-matrix { overflow-x:auto }
+  .kb-matrix .kb-desktop { min-width:940px }
+  .kb-desktop .kb-groups th { height:32px; color:var(--accent) }
+  .kb-desktop thead tr:nth-child(2) th { height:63px; background:var(--surface) }
+  .kb-desktop tbody th { padding-left:14px; font-size:13px; font-weight:600 }
+  .kb-desktop .kb-cell { min-height:clamp(30px,3.6vh,36px) }
+}
+@media (max-width:760px) {
   .kb-matrix .kb-desktop { display:none }
   .kb-matrix .kb-mobile { display:table }
   .kb-mobile thead th:first-child { width:30%; text-align:left; padding-left:7px }
   .kb-mobile thead th { vertical-align:bottom; padding:7px 0 }
-  .kb-mobile thead th span { display:inline-block; writing-mode:vertical-rl; transform:rotate(180deg); white-space:nowrap }
+  .kb-mobile thead th span { display:inline-block; writing-mode:vertical-rl; transform:rotate(180deg); max-inline-size:8em; white-space:normal; text-wrap:balance }
   .kb-mobile tbody th { font-size:11px; padding:3px 5px }
   .kb-mobile td { padding:1px 0 }
   .kb-mobile .kb-cell { min-height:23px }
@@ -42,3 +50,28 @@ main:has(.kb-section) > .notice:empty { display:none }
 }
 
 .kb-mobile-date { display:none } @media (max-width:760px) { .kb-mobile-date { display:inline } }
+.kb-cell { width:100%; padding:0; border:0; background:transparent; color:inherit; cursor:pointer }
+.kb-cell:focus-visible,.kb-record summary:focus-visible { outline:2px solid var(--accent); outline-offset:-2px }
+.kb-stage-dialog { width:min(420px,calc(100% - 24px)); overflow-wrap:anywhere }
+.kb-stage-dialog h3,.kb-register h2 { font-size:16px; margin:0 }
+.kb-stage-dialog form { text-align:right }
+.kb-stage-dialog button { min-height:40px; padding:6px 16px; border:1px solid var(--line); border-radius:10px; background:var(--tint); color:var(--accent); cursor:pointer }
+.kb-register { margin:20px 0 12px }
+.kb-register > p,.kb-record p { color:var(--muted); font-size:13px }
+.kb-section .kb-record { min-width:0; padding:0; margin:6px 0; background:var(--surface); border:1px solid var(--line); border-radius:12px; }
+.kb-record summary { cursor:pointer; padding:12px; font-weight:600; overflow-wrap:anywhere }
+.kb-record summary small { color:var(--accent); margin-left:8px; white-space:nowrap }
+.kb-record dl { margin:4px 12px 12px; display:grid; grid-template-columns:minmax(9em,22%) 1fr; gap:6px 14px; font-size:13px }
+.kb-record dd { margin:0; overflow-wrap:anywhere }
+.kb-record dt,.kb-nodes small { color:var(--muted) }
+.kb-record p,.kb-record .table-wrap { margin:8px 12px }
+.kb-record .kb-nodes { margin:0 12px 12px; padding:0 }
+.kb-nodes ul { list-style:none; padding:0 12px; margin:0 }
+.kb-nodes li { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:2px 8px; border-top:1px solid var(--line); padding:8px 0; font-size:13px; overflow-wrap:anywhere }
+.kb-nodes small { grid-column:1/-1 }
+@media(max-width:760px) {
+  .kb-record dl { grid-template-columns:1fr; gap:2px }
+  .kb-record dd + dt { margin-top:6px }
+  .kb-mobile button.kb-cell { min-height:28px }
+  .kb-record summary { min-height:44px }
+}
