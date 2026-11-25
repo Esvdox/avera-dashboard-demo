@@ -77,7 +77,7 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
   const marks = points.map(([label, value, day, partial]) => ({
     label, value, partial, x: x(coordinate(day)), y: y(value)
   }));
-  const curveMarks = marks.filter(mark => !mark.partial);
+  const curveMarks = options.connectPartialPeriods ? marks : marks.filter(mark => !mark.partial);
   const first = curveMarks[0];
   marks.forEach((mark, i) => {
     const previous = marks[i - 1];
@@ -150,7 +150,7 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
     }).join('') : '';
   const coverage = (options.contractDates || []).map(([label,count,day]) => `<path class="contract-coverage-tick" d="M${x(Date.parse(day))} 177v6" stroke="var(--muted)" stroke-width="1.5"><title>${safe(label + ' · договоров: ' + count)}</title></path>`).join('');
   const balanceDescription = compactSecondary && secondMarks.length
-    ? '. Остаток на конец месяца: ' + secondMarks.map(mark => mark.label + ': ' + fmt(mark.value)).join('. ') : '';
+    ? '. Остаток на отчётную дату: ' + secondMarks.map(mark => mark.label + ': ' + fmt(mark.value)).join('. ') : '';
   return '<svg class="av-profit-chart" viewBox="0 0 ' + width + ' 202" role="img" aria-label="' +
     safe(unit + '. ' + marks.map(mark => mark.label + ': ' + format(mark.value)).join('. ') + (options.ordinal ? '. Рентабельность: ' + secondMarks.map(mark => mark.label + ': ' + fmt(mark.value) + '%').join('. ') : '') + balanceDescription + (showArrival ? '. ' + arrivalLabel : '')) + '">' +
     ticks.map(value => '<path d="M' + left + ' ' + y(value) + 'H' + right + '" class="av-kpi-gridline"/><text class="' + (Math.abs(Math.round(value/tickStep))%2 ? 'av-kpi-minor-tick' : '') + '" x="42" y="' +
@@ -251,18 +251,18 @@ function cashMovementCard() {
   const change = cashDelta(points, 'поток', ([period]) => period);
   const balanceChange = cashDelta(balances, 'остаток', ([,,day]) => day.split('-').reverse().join('.'));
   const balanceKpi = balance ? `<div class="av-cash-balance-kpi">
-    <div class="av-label">Остаток на конец месяца</div>
+    <div class="av-label">Остаток на отчётную дату</div>
     <div class="av-number av-kpi-values"><span>${safe(fmt(balance[1]) + ' ' + cashUnit)}</span>${balanceChange}</div>
   </div>` : '';
   const legend = last || balance ? '<div class="av-cash-legend av-chart-legend">' +
-    (last ? '<span><i aria-hidden="true"></i>Чистый денежный поток</span>' : '') +
-    (balance ? '<span><i class="av-cash-dash" aria-hidden="true"></i>Остаток на конец месяца</span>' : '') +
+    (last ? '<span><i aria-hidden="true"></i>Чистый денежный поток за период</span>' : '') +
+    (balance ? '<span><i class="av-cash-dash" aria-hidden="true"></i>Остаток на отчётную дату</span>' : '') +
     (dateInRange(arrivalDay) ? '<span><i class="av-arrival-key" aria-hidden="true"></i>' + arrivalLabel + '</span>' : '') +
     '</div>' : '';
   const label = 'Чистый денежный поток и остатки на счетах';
   return card('wallet', label, last ? fmt(last[1]) + ' ' + cashUnit : 'НД', null, 'finance',
     overviewChart('netCashFlow', points, label + ', ' + cashUnit, fmt, balances,
-      {compactSecondary:true, secondaryColor:'var(--av-cash-balance)', arrivalGuide:true}) + legend, change, balanceKpi);
+      {connectPartialPeriods:true, compactSecondary:true, secondaryColor:'var(--av-cash-balance)', arrivalGuide:true}) + legend, change, balanceKpi);
 }
 
 function financeCard(id, label, icon) {
