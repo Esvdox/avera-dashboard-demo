@@ -7,7 +7,7 @@
   let selection = '';
 
   function progress(amount, cost, paid = false) {
-    if (amount === null) return '<span class="order-missing">Нет суммы в справке</span>';
+    if (amount === null) return '<span class="order-missing">Работы не начаты</span>';
     const label = paid ? 'Оплачено' : 'Выполнено';
     return `<div class="order-line ${paid ? 'order-paid' : ''}" aria-label="${label}: ${percent(amount, cost)}">
       <span class="order-track"><i style="width:${100 * amount / cost}%"></i></span>
