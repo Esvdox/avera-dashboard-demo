@@ -208,12 +208,16 @@ function seriesPoints(key, unit) {
     .map(([day, value, label, basis, partial]) => [label, value * scale, day, partial, basis]);
 }
 
-function summaryCard({id, icon, label, route, unit, points, note = '', value, secondary = [], options, change = ''}) {
+function summaryCard({id, icon, label, route, unit, points, note = '', value, secondary = [], options, change = '', lineLabels}) {
   const last = points.at(-1);
   const displayed = value ?? (last ? fmt(last[1]) + ' ' + unit : 'НД');
   const description = note === null ? null : note || (last ? last[0] : 'Нет среза в выбранном периоде');
+  const legend = lineLabels && (points.length || secondary.length) ? '<div class="av-chart-legend">' +
+    (points.length ? '<span><i aria-hidden="true"></i>Сплошная — ' + safe(lineLabels[0]) + '</span>' : '') +
+    (secondary.length ? '<span><i class="av-series-dash" aria-hidden="true"></i>Пунктир — ' + safe(lineLabels[1]) + '</span>' : '') +
+    '</div>' : '';
   return card(icon, label, displayed, description, route,
-    overviewChart(id, points, label + ', ' + unit, fmt, secondary, options), change, '');
+    overviewChart(id, points, label + ', ' + unit, fmt, secondary, options) + legend, change, '');
 }
 
 function statusCard(icon, label, value, note, route) {
@@ -358,7 +362,7 @@ function balanceCard() {
   const receive = latest && secondary.find(point => point[2] === latest[2]);
   return summaryCard({id:'balances', icon:'wallet', label:'Кредиторская и дебиторская задолженность', route:'finance',
     unit:cashUnit, points, secondary, value:latest && receive ? fmt(latest[1]) + ' / ' + fmt(receive[1]) + ' ' + cashUnit : undefined,
-    note:latest ? 'На ' + latest[0] + ' · сплошная — кредиторка, пунктир — дебиторка' : ''});
+    note:null, lineLabels:['кредиторская задолженность','дебиторская задолженность']});
 }
 
 function loanCard() {
@@ -399,8 +403,9 @@ function teamCard() {
   }).join('') : '';
   return summaryCard({id:'team-history', icon:'people', label:'Команда', route:'people', unit:'ставки',
     points:[...history,...planned], secondary:occupied, options:{branch:true}, change,
+    lineLabels:['средняя численность за 2024–2025, с 16.10.2026 — всего ставок','занятые ставки'],
     value:actual ? fmt(latest[1]) + ' / ' + fmt(actual[1]) + ' ставки' : history.length ? fmt(history.at(-1)[1]) + ' чел.' : 'НД',
-    note:'2024–2025 — средняя численность. С 16.10.2026 сплошная — всего ставок, пунктир — занято.'});
+    note:null});
 }
 
 window.renderStaffingSnapshot = function () {
