@@ -497,7 +497,7 @@ window.applyActualLabels=function(){
     $('#title').textContent='Сводка по компании';
     $('#subtitle').textContent='';
     document.querySelector('main > .notice').textContent='';
-    document.querySelector('.asof').textContent='Даты срезов указаны в карточках';
+    document.querySelector('.asof').replaceChildren();
     spaceOverviewLabels();
   }
 };render();
