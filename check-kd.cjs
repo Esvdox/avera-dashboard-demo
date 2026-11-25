@@ -1,3 +1,47 @@
-const{chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const{pathToFileURL}=require('url');const path=require('path'),assert=require('assert/strict');
-(async()=>{const b=await chromium.launch();try{for(const width of [390,1280]){const p=await b.newPage({viewport:{width,height:900}});const errors=[];p.on('pageerror',e=>errors.push(e.message));await p.goto(process.env.AVERA_URL||pathToFileURL(path.join(__dirname,'index.html')).href);await p.waitForFunction(()=>!!window.AVERA_KD);await p.evaluate(()=>location.hash='products');await p.getByRole('heading',{name:'Аттракционы · готовность КД',exact:true}).waitFor();assert.equal(await p.locator('#content table').first().locator('tbody tr').count(),7);const t=await p.locator('#content').innerText();for(const v of ['99,82%','99,17%','85%','94,5%','17,5%','Допущено к производству','Чертежи не утверждены'])assert.ok(t.includes(v),v);assert.equal(await p.evaluate(()=>window.AVERA_METRICS.products().complete),2);assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await p.evaluate(()=>location.hash='overview');await p.getByText('Номенклатура аттракционов',{exact:true}).waitFor();assert.match(await p.locator('.av-grid').innerText(),/7 SKU/);if(!process.env.AVERA_URL){await p.evaluate(()=>{window.AVERA_KD.items.find(r=>r.kind==='ride').sourcePercent=100;render();});assert.match(await p.locator('.av-grid').innerText(),/3 из 7 SKU/);}assert.deepEqual(errors,[]);console.log('PASS KD source, classification, overview, binding '+width);await p.close();}}finally{await b.close();}})().catch(e=>{console.error(e);process.exit(1)});
+const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const {pathToFileURL} = require('node:url');
+
+const expected = [
+  'nnnnnynnnnnnnn', 'nnnnppnnnpnnnn', 'nnnnpynnnyyyyy', 'nnnnyynnnyyyyy',
+  'nnnnyynnnyyynn', 'nnnnyynnnpnnnn', 'nnnnppnnnpnnnn', 'pnnnnnnnnnnnnn'
+];
+async function run() {
+  const browser = await chromium.launch({executablePath: process.env.CHROME_PATH});
+  try {
+    for (const width of [320,390,1024,1440]) {
+      const page = await browser.newPage({viewport:{width,height:width < 600 ? 844 : 900}});
+      const errors = [];
+      page.on('pageerror', e => errors.push(e.message));
+      await page.goto(process.env.AVERA_URL || pathToFileURL(path.join(__dirname,'index.html')).href);
+      const menu = page.getByRole('button',{name:'Открыть меню',exact:true});
+      if (await menu.isVisible()) await menu.click();
+      await page.getByRole('navigation').getByRole('link',{name:'Продукты и КБ',exact:true}).click();
+      const matrix = page.locator('.kb-matrix table:visible');
+      await matrix.waitFor();
+      for (const theme of ['light','dark']) {
+        if (await page.locator('body').evaluate(b=>b.classList.contains('dark')) !== (theme==='dark')) await page.locator('#theme').click();
+        const cols = await matrix.locator('.kb-cell .kb-mark').evaluateAll(marks=>marks.map(m=>m.className.slice(-1)));
+        const isDesktop = await matrix.evaluate(t=>t.classList.contains('kb-desktop'));
+        assert.equal(cols.length,112);
+        expected.forEach((row,i)=>[...row].forEach((s,j)=>assert.equal(cols[isDesktop?14*i+j:8*j+i],s)));
+        assert.deepEqual(await matrix.locator('.kb-pct').allTextContents(),['100','94,5*','100','99,8','99,2','85','17,5*','×']);
+        assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth));
+        if(process.env.KB_PREVIEW && [390,1440].includes(width)) await page.screenshot({path:path.join(process.env.KB_PREVIEW,'kb-'+width+'-'+theme+'.png'),fullPage:true});
+      }
+      await page.locator('.kb-details > summary').click();
+      assert.ok(await page.getByText(/в формуле J131/).isVisible());
+      await page.reload();
+      await matrix.waitFor();
+      await page.goBack();
+      await page.getByRole('heading',{name:'Сводка по компании',exact:true}).waitFor();
+      await page.goForward();
+      await matrix.waitFor();
+      assert.deepEqual(errors,[]);
+      await page.close();
+      console.log('PASS',width);
+    }
+  } finally { await browser.close(); }
+}
+run().catch(e=>{console.error(e);process.exitCode=1;});
