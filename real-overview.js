@@ -379,8 +379,10 @@ function productsCard() {
   const secondary = [['Начало периода управления',0,'2026-10-26'],['Текущий срез',0,'2026-11-09']]
     .filter(point=>dateInRange(point[2]));
   return summaryCard({id:'product-pair', icon:'products', label:'Продуктовый портфель', route:'products', unit:'SKU',
-    points, secondary, value:current.length ? fmt(current.at(-1)[1]) + (secondary.length ? ' / 0 SKU' : ' SKU') : 'НД',
-    note:'Сплошная — аттракционы, стартовый ноль условный. Пунктир — неаттракционы с 26.10.2026.'});
+    points, secondary,
+    value:'Аттракционы — ' + (current.length ? fmt(current.at(-1)[1]) : 'НД') +
+      ' · Смежные продукты — ' + (secondary.length ? fmt(secondary.at(-1)[1]) : 'НД'),
+    note:null, lineLabels:['аттракционы','смежные продукты']});
 }
 
 function teamCard() {
