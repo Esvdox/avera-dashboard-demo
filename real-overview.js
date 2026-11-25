@@ -396,12 +396,26 @@ function loanCard() {
 }
 
 function productsCard() {
-  const current = seriesPoints('attractions', 'SKU');
+  const registry = window.AVERA_KB_STAGES.products;
+  const dates = [...new Set(registry.map(p=>p.portfolioSince))].sort();
+  const history = dates.map(day => [
+    day.split('-').reverse().join('.'), registry.filter(p=>p.portfolioSince<=day).length, day
+  ]);
+  // Количество изделий — остаток на дату. Между срезами сохраняется последнее известное значение.
+  function periodPoints(series) {
+    const selected = series.filter(point=>dateInRange(point[2]));
+    for (const day of new Set([overviewRange.from, overviewRange.to])) {
+      if (selected.some(point=>point[2]===day)) continue;
+      const prior = series.filter(point=>point[2]<day).at(-1);
+      if (prior) selected.push(['На '+day.split('-').reverse().join('.'),prior[1],day]);
+    }
+    return selected.sort((a,b)=>a[2].localeCompare(b[2]));
+  }
+  const current = periodPoints(history);
   const points = dateInRange('2024-01-01') ? [['Условный старт',0,'2024-01-01'], ...current] : current;
-  const secondary = [['Начало периода управления',0,'2026-10-26'],['Текущий срез',0,'2026-11-09']]
-    .filter(point=>dateInRange(point[2]));
+  const secondary = periodPoints([['Начало периода управления',0,'2026-10-26'],['09.11.2026',0,'2026-11-09']]);
   return summaryCard({id:'product-pair', icon:'products', label:'Продуктовый портфель', route:'products', unit:'SKU',
-    points, secondary,
+    points, secondary, options:{integerAxis:true},
     value:'Аттракционы — ' + (current.length ? fmt(current.at(-1)[1]) : 'НД') +
       ' · Смежные продукты — ' + (secondary.length ? fmt(secondary.at(-1)[1]) : 'НД'),
     note:null, lineLabels:['аттракционы','смежные продукты']});

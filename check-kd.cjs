@@ -16,9 +16,27 @@ async function run() {
       const errors = [];
       page.on('pageerror', e => errors.push(e.message));
       await page.goto(process.env.AVERA_URL || pathToFileURL(path.join(__dirname,'index.html')).href);
-      const menu = page.getByRole('button',{name:'Открыть меню',exact:true});
-      if (await menu.isVisible()) await menu.click();
-      await page.getByRole('navigation').getByRole('link',{name:'Продукты и КБ',exact:true}).click();
+      const portfolioLink = page.getByRole('link',{name:'Продуктовый портфель',exact:true});
+      const card = page.locator('article').filter({has:portfolioLink});
+      const number = card.locator('.av-number');
+      assert.match(await number.innerText(),/Аттракционы — 8 · Смежные продукты — 0/);
+      const chart = await card.locator('svg.av-profit-chart').getAttribute('aria-label');
+      assert.match(chart,/02\.11\.2026: 7/);
+      assert.match(chart,/23\.11\.2026: 8/);
+      if(process.env.KB_PREVIEW && [390,1440].includes(width)) {
+        await card.screenshot({path:path.join(process.env.KB_PREVIEW,'portfolio-'+width+'.png')});
+      }
+      for (const [day,count] of [['22',7],['23',8]]) {
+        await page.locator('[data-overview-date="to"]').click();
+        const calendar = page.getByRole('dialog');
+        await calendar.locator('input[type=number]').fill('2026');
+        await calendar.locator('select').selectOption('10');
+        await calendar.locator('[data-day="2026-11-'+day+'"]').click();
+        await calendar.locator('[data-ok]').click();
+        assert.ok((await number.innerText()).includes('Аттракционы — '+count+' ·'));
+      }
+      await page.locator('[data-period-index="0"]').click();
+      await activate(portfolioLink);
       const matrix = page.locator('.kb-matrix table:visible');
       await matrix.waitFor();
       for (const theme of ['light','dark']) {
@@ -41,16 +59,16 @@ async function run() {
       await activate(dialog.getByRole('button',{name:'Закрыть'}));
       assert.equal(await page.locator('.kb-register .kb-record').count(),13);
       assert.equal(await page.locator('.kb-nodes li').count(),129);
-      const card = page.locator('[data-record="KD-06"]');
-      await activate(card.locator(':scope > summary'));
-      await activate(card.locator('.kb-nodes summary'));
-      assert.equal(await card.locator('li:visible').count(),36);
+      const record = page.locator('[data-record="KD-06"]');
+      await activate(record.locator(':scope > summary'));
+      await activate(record.locator('.kb-nodes summary'));
+      assert.equal(await record.locator('li:visible').count(),36);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth));
       if (process.env.KB_PREVIEW && [390,1440].includes(width)) {
-        await card.locator(':scope > summary').scrollIntoViewIfNeeded();
+        await record.locator(':scope > summary').scrollIntoViewIfNeeded();
         await page.screenshot({path:path.join(process.env.KB_PREVIEW,'kb-detail-'+width+'.png')});
       }
-      await activate(card.locator(':scope > summary'));
+      await activate(record.locator(':scope > summary'));
       await activate(page.locator('.kb-section > .kb-record > summary'));
       assert.equal(await page.locator('.kb-section > .kb-record tbody tr:visible').count(),7);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth));
