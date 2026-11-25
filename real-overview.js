@@ -40,14 +40,23 @@ function overviewTimeTicks(start, end, count) {
 
 function overviewChart(id, points, unit, format = fmt, secondary = [], options = {}) {
   if (!points.length && !secondary.length && !options.contractDates?.length) return missing;
-  const start = options.ordinal ? 1 : Date.parse(overviewRange.from);
-  const end = options.ordinal ? points.length : Date.parse(overviewRange.to);
+  const start = options.contractDatesAxis ? Math.min(...points.map(point => Date.parse(point[2]))) : options.ordinal ? 1 : Date.parse(overviewRange.from);
+  const end = options.contractDatesAxis ? Math.max(...points.map(point => Date.parse(point[2]))) : options.ordinal ? points.length : Date.parse(overviewRange.to);
   const coordinate = key => options.ordinal ? key : Date.parse(key);
   const width = $('#content').clientWidth - 34;
   const left = 56, right = width - (options.rightAxis ? 52 : 26);
   const x = day => end === start ? (left + right) / 2 : left + 28 + (right - left - 56) * (day - start) / (end - start);
   const ordinalStep = Math.max(1, Math.ceil((end - start) / Math.max(1, Math.floor((right - left - 56) / 49))));
-  const ticksX = options.ordinal ? points
+  const observedDates = options.contractDatesAxis ? [...new Set(points.map(point => point[2]))] : [];
+  const dateTicks = observedDates.reduce((ticks, day, index) => {
+    const stamp = Date.parse(day);
+    if (index === observedDates.length - 1 || !ticks.length ||
+        (x(stamp) - x(ticks.at(-1).date) >= 70 && x(end) - x(stamp) >= 70)) {
+      ticks.push({date:stamp,label:day.slice(8,10)+'.'+day.slice(5,7)+'.'+day.slice(2,4)});
+    }
+    return ticks;
+  }, []);
+  const ticksX = options.contractDatesAxis ? dateTicks : options.ordinal ? points
     .filter(([, , position]) => position === end || ((position - 1) % ordinalStep === 0 && (position === 1 || end - position >= ordinalStep)))
     .map(([, , position]) => ({date:position, label:'№' + position}))
     : options.quarterTicks ? points.map(([label,,day])=>({date:Date.parse(day),label}))
@@ -92,7 +101,7 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
       '" stop-opacity="0"/></linearGradient></defs><g clip-path="url(#' + key + ')"><path d="' +
       area + '" fill="url(#' + key + '-fill)"/><path d="' + curve + '" fill="none" stroke="' + shade + '" stroke-width="1.5" vector-effect="non-scaling-stroke"/></g>';
   }).join('');
-  const showArrival = !options.ordinal && dateInRange(arrivalDay);
+  const showArrival = !options.ordinal && arrivalDate >= start && arrivalDate <= end && dateInRange(arrivalDay);
   let management = '';
   if (showArrival) {
     const arrivalX = x(arrivalDate);
@@ -148,7 +157,7 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
       (y(value) + 4) + '" text-anchor="end">' + safe(fmt(value)) + '</text>').join('') + traces + management +
     '<path d="M' + left + ' 28V176 M' + left + ' ' + zero + 'H' + right + '" class="av-profit-axis"/>' + secondaryLine + rightTicks + coverage +
     marks.map((mark, i) => (options.markerDays && !options.markerDays.has(points[i][2]) ? '' : '<circle cx="' + mark.x + '" cy="' + mark.y + '" r="3" stroke="' + color(mark.value) + '" fill="' + (i===0 && marks.length>1 ? 'var(--surface)' : color(mark.value)) +
-      '"><title>' + safe(mark.label + ': ' + format(mark.value)) + '</title></circle>') + (marks.length > 8 && i > 0 && i < marks.length - 1 ? '' : '<text class="av-kpi-point-label" x="' + mark.x + '" y="' + mark.labelY + '" fill="' + color(mark.value) + '" text-anchor="middle">' +
+      '"><title>' + safe(mark.label + ': ' + format(mark.value) + (options.showMissingMargins && !secondary.some(item => item[0] === mark.label) ? ' · Маржинальность: НД' : '')) + '</title></circle>') + (marks.length > 8 && i > 0 && i < marks.length - 1 ? '' : '<text class="av-kpi-point-label" x="' + mark.x + '" y="' + mark.labelY + '" fill="' + color(mark.value) + '" text-anchor="middle">' +
       safe(format(mark.value)) + '</text>')).join('') +
     ticksX.map(tick=>'<text x="'+x(tick.date)+'" y="194" text-anchor="middle">'+safe(tick.label)+'</text>').join('') +
     '</svg>';
@@ -326,24 +335,20 @@ function marginChange(snapshot) {
 }
 
 function marginCard() {
-  const history = window.AVERA_OVERVIEW_SERIES.contractAnalysisSnapshots || [window.AVERA_OVERVIEW_SERIES.contractAnalysisSnapshot];
-  const snapshot = history.filter(item => item && dateInRange(item.asOf)).at(-1);
-  const rows = snapshot?.positions || [];
-  const points = rows.map(([price], i) => ['Позиция №' + (i + 1), price / 1e6, i + 1]);
-  const secondary = rows.map(([, rate], i) => ['Позиция №' + (i + 1), rate * 100, i + 1]);
-  const label = 'Стоимость и рентабельность договоров';
-  const value = 'Взвешенная рентабельность — ' + (rows.length ? fmt(snapshot.weightedRate * 100) + '%' : 'НД');
-  const arrivalSnapshot = history.some(item => item?.asOf === arrivalDay)
-    ? `<span><i class="av-arrival-key" aria-hidden="true"></i>${snapshot?.asOf === arrivalDay ? 'Срез на дату прихода' : 'База сравнения'} · ${arrivalDateLabel}</span>`
-    : '';
-  const legend = rows.length ? `<div class="av-chart-legend av-margin-legend">
-    <span><i aria-hidden="true"></i>Стоимость с НДС, млн ₽</span>
-    <span><i class="av-margin-dash" aria-hidden="true"></i>Рентабельность, %</span>
-    ${arrivalSnapshot}
-  </div>` : '';
-  return card('sales', label, value, null, 'sales',
-    overviewChart('deal-margin', points, label + ', ' + cashUnit, fmt, secondary,
-      {rightAxis:true, ordinal:true}) + legend, rows.length ? marginChange(snapshot) : '', '');
+  const source = window.AVERA_OVERVIEW_SERIES.contractMarginRegistry;
+  const rows = (source?.records || []).filter(row => dateInRange(row.date)).sort((a,b) => a.date.localeCompare(b.date));
+  const known = rows.filter(row => row.rate !== null);
+  const weightedRate = known.length ? known.reduce((sum,row) => sum + row.margin,0) / known.reduce((sum,row) => sum + row.netPrice,0) : null;
+  const labelFor = row => 'Договор: ' + (row.number === 'б/н' ? row.number : '№ ' + row.number) + '\nЗаказчик: ' + row.customer + '\nДата договора: ' + row.date.split('-').reverse().join('.') + '\n' + row.label;
+  const points = rows.map(row => [labelFor(row),row.price/1e6,row.date]);
+  const secondary = rows.flatMap(row => row.rate === null ? [] : [[labelFor(row),row.rate*100,row.date]]);
+  const legend = '<div class="av-chart-legend av-margin-legend">' +
+    '<span><i aria-hidden="true"></i>Цена договора с НДС, млн ₽</span>' +
+    '<span><i class="av-margin-dash" aria-hidden="true"></i>Маржинальность, %</span></div>';
+  return card('sales','Стоимость и маржинальность договоров',
+    'Взвешенная маржинальность — ' + (weightedRate === null ? 'НД' : fmt(weightedRate*100) + '%'),null,'sales',
+    overviewChart('deal-margin',points,'Цена договора с НДС, млн ₽',fmt,secondary,
+      {rightAxis:true,contractDatesAxis:true,showMissingMargins:true}) + legend,'','');
 }
 
 function balanceCard() {
