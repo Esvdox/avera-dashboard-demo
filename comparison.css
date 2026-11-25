@@ -87,3 +87,11 @@
     display:grid;grid-row:span 3;grid-template-rows:subgrid;row-gap:4px;align-items:start;
   }
 }
+#avera-owner .av-range-bar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px}
+#avera-owner .av-range-bar .cmp-dates{width:auto;min-width:0;max-width:100%;margin:0;grid-template-columns:repeat(2,minmax(0,1fr))}
+#avera-owner .av-range-bar .cmp-date-input{width:110px;max-width:100%}
+#avera-owner .av-range-bar input[type=date]{font-size:13px;padding-inline:3px}
+#avera-owner .av-range-presets{display:flex;flex-wrap:wrap;gap:5px}
+#avera-owner .av-range-presets button{min-height:34px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text);font:inherit;font-size:13px;cursor:pointer}
+#avera-owner .av-range-presets button[aria-pressed=true]{color:var(--accent);background:var(--tint);border-color:var(--accent)}
+@media(pointer:coarse){#avera-owner .av-range-presets button{min-height:40px}}

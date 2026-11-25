@@ -9,7 +9,13 @@ function card(icon, label, value, note, route, chart, change, controls) {
   </article>`;
 }
 
-const overviewRange = {from: '2024-01-01', to: new Intl.DateTimeFormat('sv-SE', {timeZone:'Europe/Moscow'}).format(new Date())};
+const fullRange = {from: '2024-01-01', to: new Intl.DateTimeFormat('sv-SE', {timeZone:'Europe/Moscow'}).format(new Date())};
+const overviewRange = {...fullRange};
+const periods = [
+  {label:'За все время', ...fullRange},
+  {label:'2025', from:'2025-01-01', to:'2025-12-31'},
+  {label:'2026', from:'2026-01-01', to:fullRange.to < '2026-12-31' ? fullRange.to : '2026-12-31'}
+];
 const arrivalDay = '2026-10-26';
 const arrivalDate = Date.parse(arrivalDay);
 const arrivalDateLabel = arrivalDay.split('-').reverse().join('.');
@@ -39,13 +45,18 @@ function overviewTimeTicks(start, end, count) {
 }
 
 function overviewChart(id, points, unit, format = fmt, secondary = [], options = {}) {
-  if (!points.length && !secondary.length && !options.contractDates?.length) return missing;
+  const primarySeries = options.history || points;
+  const secondarySeries = options.secondaryHistory || secondary;
+  if (!primarySeries.length && !secondarySeries.length && !options.contractDates?.length) return missing;
   const start = options.contractDatesAxis ? Math.min(...points.map(point => Date.parse(point[2]))) : options.ordinal ? 1 : Date.parse(overviewRange.from);
   const end = options.contractDatesAxis ? Math.max(...points.map(point => Date.parse(point[2]))) : options.ordinal ? points.length : Date.parse(overviewRange.to);
   const coordinate = key => options.ordinal ? key : Date.parse(key);
   const width = $('#content').clientWidth - 34;
   const left = 56, right = width - (options.rightAxis ? 52 : 26);
-  const x = day => end === start ? (left + right) / 2 : left + 28 + (right - left - 56) * (day - start) / (end - start);
+  const padding = options.history ? 0 : 28;
+  const x = day => end === start ? (left + right) / 2 : left + padding + (right - left - 2 * padding) * (day - start) / (end - start);
+  // A single selected date has no horizontal interval to interpolate.
+  const geometry = series => options.history && start === end ? series.filter(point => coordinate(point[2]) === start) : series;
   const ordinalStep = Math.max(1, Math.ceil((end - start) / Math.max(1, Math.floor((right - left - 56) / 49))));
   const observedDates = options.contractDatesAxis ? [...new Set(points.map(point => point[2]))] : [];
   const dateTicks = observedDates.reduce((ticks, day, index) => {
@@ -63,7 +74,7 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
     .filter((tick, i, ticks) => i === ticks.length - 1 || (i === 0 && x(ticks.at(-1).date) - x(tick.date) >= 56) ||
       (i > 0 && x(tick.date) - x(ticks[i-1].date) >= 56 && x(ticks.at(-1).date) - x(tick.date) >= 56))
     : overviewTimeTicks(start,end,Math.max(2,Math.floor((right-left)/85)));
-  const values = (options.rightAxis ? points : [...points, ...secondary]).map(([, value]) => value);
+  const values = (options.rightAxis ? primarySeries : [...primarySeries, ...secondarySeries]).map(([, value]) => value);
   const minimum = Math.min(0, ...values);
   const maximum = Math.max(0, ...values);
   const span = maximum - minimum || 1;
@@ -74,10 +85,12 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
   const y = value => 28 + (high - value) / (high - low) * 148;
   const zero = y(0);
   const color = value => value < 0 ? 'var(--av-profit-loss)' : 'var(--accent)';
-  const marks = points.map(([label, value, day, partial]) => ({
+  const toMark = ([label, value, day, partial]) => ({
     label, value, partial, x: x(coordinate(day)), y: y(value)
-  }));
-  const curveMarks = options.connectPartialPeriods ? marks : marks.filter(mark => !mark.partial);
+  });
+  const marks = points.map(toMark);
+  const fullMarks = options.history ? geometry(primarySeries).map(toMark) : marks;
+  const curveMarks = options.connectPartialPeriods ? fullMarks : fullMarks.filter(mark => !mark.partial);
   const first = curveMarks[0];
   marks.forEach((mark, i) => {
     const previous = marks[i - 1];
@@ -109,8 +122,8 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
     const after = curveMarks.findIndex(mark => mark.x > arrivalX);
     let arrivalY = exact?.y;
     if (arrivalY === undefined && after > 0) {
-      const previous = marks[after - 1];
-      const next = marks[after];
+      const previous = curveMarks[after - 1];
+      const next = curveMarks[after];
       const t = (arrivalX - previous.x) / (next.x - previous.x);
       arrivalY = previous.y + (next.y - previous.y) * t * t * (3 - 2 * t);
     }
@@ -130,14 +143,16 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
   const rateLow = Math.min(0, Math.floor(Math.min(...secondaryValues) / 4) * 4);
   const rateHigh = Math.max(4, Math.ceil(Math.max(...secondaryValues) / 4) * 4);
   const secondaryY = options.rightAxis ? value => 28 + (rateHigh - value) / (rateHigh - rateLow) * 148 : y;
-  const secondMarks = secondary.map(([label, value, day]) => ({label, value, x:x(coordinate(day)), y:secondaryY(value)}));
+  const toSecondaryMark = ([label, value, day]) => ({label, value, x:x(coordinate(day)), y:secondaryY(value)});
+  const secondMarks = secondary.map(toSecondaryMark);
+  const secondaryCurve = options.secondaryHistory ? geometry(secondarySeries).map(toSecondaryMark) : secondMarks;
   const compactSecondary = options.compactSecondary;
   const secondaryColor = options.secondaryColor ?? (options.rightAxis ? 'var(--av-management)' : 'var(--muted)');
   const rightTicks = options.rightAxis && secondMarks.length ? Array.from({length:5}, (_, i) => rateLow + (rateHigh-rateLow)*i/4)
     .map(value => `<text x="${right + 5}" y="${secondaryY(value) + 4}" fill="${secondaryColor}">${safe(fmt(value))}%</text>`).join('') : '';
   const branch = options.branch && secondMarks.length ? marks.find(mark => mark.x === secondMarks[0].x) : null;
-  const secondPath = smoothCurve(branch ? [branch, ...secondMarks] : secondMarks);
-  const secondaryLine = secondMarks.length ? `<path class="av-secondary-line" d="${secondPath}" fill="none" stroke="${secondaryColor}" stroke-width="1.5" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>` +
+  const secondPath = smoothCurve(branch ? [branch, ...secondaryCurve] : secondaryCurve);
+  const secondaryLine = secondaryCurve.length ? `<path class="av-secondary-line" d="${secondPath}" fill="none" stroke="${secondaryColor}" stroke-width="1.5" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"/>` +
     secondMarks.map((mark, i) => {
       const value = fmt(mark.value) + (options.rightAxis ? '%' : '');
       const dot = `<circle class="av-secondary-point" r="${compactSecondary ? 2 : 3}" fill="${secondaryColor}" cx="${mark.x}" cy="${mark.y}"><title>${safe(mark.label + ': ' + value)}</title></circle>`;
@@ -148,14 +163,18 @@ function overviewChart(id, points, unit, format = fmt, secondary = [], options =
       const labelY = Math.min(175, mark.y + (compactSecondary ? -10 : 17));
       return dot + `<text class="av-kpi-point-label" x="${labelX}" y="${labelY}" text-anchor="${labelOnRight ? 'start' : 'end'}" fill="${secondaryColor}">${safe(value)}</text>`;
     }).join('') : '';
+  // The scale and curves use the full series. Only the selected window is painted.
+  const windowId = clip('window');
+  const windowDef = options.history ? `<defs><clipPath id="${windowId}"><rect x="${left}" y="0" width="${right-left}" height="183"/></clipPath></defs>` : '';
+  const inWindow = svg => options.history ? `<g clip-path="url(#${windowId})">${svg}</g>` : svg;
   const coverage = (options.contractDates || []).map(([label,count,day]) => `<path class="contract-coverage-tick" d="M${x(Date.parse(day))} 177v6" stroke="var(--muted)" stroke-width="1.5"><title>${safe(label + ' · договоров: ' + count)}</title></path>`).join('');
   const balanceDescription = compactSecondary && secondMarks.length
     ? '. Остаток на отчётную дату: ' + secondMarks.map(mark => mark.label + ': ' + fmt(mark.value)).join('. ') : '';
   return '<svg class="av-profit-chart" viewBox="0 0 ' + width + ' 202" role="img" aria-label="' +
     safe(unit + '. ' + marks.map(mark => mark.label + ': ' + format(mark.value)).join('. ') + (options.ordinal ? '. Рентабельность: ' + secondMarks.map(mark => mark.label + ': ' + fmt(mark.value) + '%').join('. ') : '') + balanceDescription + (showArrival ? '. ' + arrivalLabel : '')) + '">' +
     ticks.map(value => '<path d="M' + left + ' ' + y(value) + 'H' + right + '" class="av-kpi-gridline"/><text class="' + (Math.abs(Math.round(value/tickStep))%2 ? 'av-kpi-minor-tick' : '') + '" x="42" y="' +
-      (y(value) + 4) + '" text-anchor="end">' + safe(fmt(value)) + '</text>').join('') + traces + management +
-    '<path d="M' + left + ' 28V176 M' + left + ' ' + zero + 'H' + right + '" class="av-profit-axis"/>' + secondaryLine + rightTicks + coverage +
+      (y(value) + 4) + '" text-anchor="end">' + safe(fmt(value)) + '</text>').join('') + windowDef + inWindow(traces + management) +
+    '<path d="M' + left + ' 28V176 M' + left + ' ' + zero + 'H' + right + '" class="av-profit-axis"/>' + inWindow(secondaryLine) + rightTicks + coverage +
     marks.map((mark, i) => (options.markerDays && !options.markerDays.has(points[i][2]) ? '' : '<circle cx="' + mark.x + '" cy="' + mark.y + '" r="3" stroke="' + color(mark.value) + '" fill="' + (i===0 && marks.length>1 ? 'var(--surface)' : color(mark.value)) +
       '"><title>' + safe(mark.label + ': ' + format(mark.value) + (options.showMissingMargins && !secondary.some(item => item[0] === mark.label) ? ' · Маржинальность: НД' : '')) + '</title></circle>') + (marks.length > 8 && i > 0 && i < marks.length - 1 ? '' : '<text class="av-kpi-point-label" x="' + mark.x + '" y="' + mark.labelY + '" fill="' + color(mark.value) + '" text-anchor="middle">' +
       safe(format(mark.value)) + '</text>')).join('') +
@@ -201,10 +220,10 @@ function spaceOverviewLabels() {
 const cashUnit = 'млн ₽';
 const dateInRange = day => day >= overviewRange.from && day <= overviewRange.to;
 
-function seriesPoints(key, unit) {
+function seriesPoints(key, unit, fullHistory = false) {
   const scale = unit === cashUnit ? 1 / 1e6 : unit === '%' ? 100 : 1;
   return (window.AVERA_OVERVIEW_SERIES[key] || [])
-    .filter(([day]) => dateInRange(day))
+    .filter(([day]) => fullHistory || dateInRange(day))
     .map(([day, value, label, basis, partial]) => [label, value * scale, day, partial, basis]);
 }
 
@@ -245,8 +264,10 @@ function cashDelta(points, subject, periodLabel) {
 }
 
 function cashMovementCard() {
-  const points = seriesPoints('netCashFlow', cashUnit);
-  const balances = seriesPoints('cash', cashUnit);
+  const history = seriesPoints('netCashFlow', cashUnit, true);
+  const secondaryHistory = seriesPoints('cash', cashUnit, true);
+  const points = history.filter(point => dateInRange(point[2]));
+  const balances = secondaryHistory.filter(point => dateInRange(point[2]));
   const last = points.at(-1), balance = balances.at(-1);
   const change = cashDelta(points, 'поток', ([period]) => period);
   const balanceChange = cashDelta(balances, 'остаток', ([,,day]) => day.split('-').reverse().join('.'));
@@ -254,19 +275,20 @@ function cashMovementCard() {
     <div class="av-label">Остаток на отчётную дату</div>
     <div class="av-number av-kpi-values"><span>${safe(fmt(balance[1]) + ' ' + cashUnit)}</span>${balanceChange}</div>
   </div>` : '';
-  const legend = last || balance ? '<div class="av-cash-legend av-chart-legend">' +
-    (last ? '<span><i aria-hidden="true"></i>Чистый денежный поток за период</span>' : '') +
-    (balance ? '<span><i class="av-cash-dash" aria-hidden="true"></i>Остаток на отчётную дату</span>' : '') +
+  const legend = history.length || secondaryHistory.length ? '<div class="av-cash-legend av-chart-legend">' +
+    (history.length ? '<span><i aria-hidden="true"></i>Чистый денежный поток за период</span>' : '') +
+    (secondaryHistory.length ? '<span><i class="av-cash-dash" aria-hidden="true"></i>Остаток на отчётную дату</span>' : '') +
     (dateInRange(arrivalDay) ? '<span><i class="av-arrival-key" aria-hidden="true"></i>' + arrivalLabel + '</span>' : '') +
     '</div>' : '';
   const label = 'Чистый денежный поток и остатки на счетах';
   return card('wallet', label, last ? fmt(last[1]) + ' ' + cashUnit : 'НД', null, 'finance',
     overviewChart('netCashFlow', points, label + ', ' + cashUnit, fmt, balances,
-      {connectPartialPeriods:true, compactSecondary:true, secondaryColor:'var(--av-cash-balance)', arrivalGuide:true}) + legend, change, balanceKpi);
+      {history, secondaryHistory, connectPartialPeriods:true, compactSecondary:true, secondaryColor:'var(--av-cash-balance)', arrivalGuide:true}) + legend, change, balanceKpi);
 }
 
 function financeCard(id, label, icon) {
-  const points = seriesPoints(id, cashUnit);
+  const history = seriesPoints(id, cashUnit, true);
+  const points = history.filter(point => dateInRange(point[2]));
   const last = points.at(-1);
   const first = last?.[4] && points.find(point => point[2] < last[2] && point[4] === last[4]);
   let change = '';
@@ -279,7 +301,7 @@ function financeCard(id, label, icon) {
     const period = first[0] + ' → ' + last[0];
     change = `<span class="av-kpi-delta${tone}" title="${safe(period)}">${safe(sign + amount + ' ' + cashUnit + result)}</span>`;
   }
-  return summaryCard({id, icon, label, route:'finance', unit:cashUnit, points, change, note:null});
+  return summaryCard({id, icon, label, route:'finance', unit:cashUnit, points, change, options:{history}, note:null});
 }
 
 function quarterOf(day) {
@@ -436,7 +458,7 @@ window.renderStaffingSnapshot = function () {
 
 window.ownerOverview = function () {
   const {from, to} = overviewRange;
-  const controls = '<div class="panel cmp-controls" aria-label="Единый период обзора"><div class="cmp-dates">' +
+  const controls = '<div class="panel cmp-controls av-range-bar" aria-label="Единый период обзора"><div class="cmp-dates">' +
     [['from','От'],['to','До']].map(([key,label]) => {
       const value = overviewRange[key];
       const shortDate = value ? value.split('-').reverse().join('.') : 'дд.мм.гггг';
@@ -447,7 +469,9 @@ window.ownerOverview = function () {
           <input type="date" id="av-overview-${key}" data-overview-date="${key}" value="${safe(value)}">
         </div>
       </div>`;
-    }).join('') + '</div></div>';
+    }).join('') + '</div><div class="av-range-presets" role="group" aria-label="Быстрый выбор периода">' +
+    periods.map((p,i) => `<button type="button" data-period-index="${i}" aria-pressed="${from === p.from && to === p.to}">${p.label}</button>`).join('') +
+    '</div></div>';
   if (!from || !to || from > to) return controls + '<p class="av-muted">Укажите корректный диапазон дат.</p>';
   const contracts = seriesPoints('contractDates', 'шт.');
   const statusVisible = dateInRange('2026-11-09');
@@ -465,6 +489,15 @@ window.ownerOverview = function () {
   return controls + '<section class="av-grid av-owner-kpis" aria-label="Показатели компании">' +
     sections.map(([name, cards], i) => '<h2 class="av-overview-section">' + (i+1) + '. ' + safe(name) + '</h2>' + cards.join('')).join('') + '</section>';
 };
+$('#content').addEventListener('click', event => {
+  const button = event.target.closest('[data-period-index]');
+  if (!button || current !== 'overview') return;
+  const preset = periods[Number(button.dataset.periodIndex)];
+  overviewRange.from = preset.from;
+  overviewRange.to = preset.to;
+  render();
+  $('#content').querySelector(`[data-period-index="${button.dataset.periodIndex}"]`).focus({preventScroll:true});
+});
 $('#content').addEventListener('change', event=>{
   const key = event.target.dataset.overviewDate;
   if (!key || current !== 'overview') return;
