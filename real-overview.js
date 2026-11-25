@@ -381,11 +381,17 @@ function teamCard() {
   if (dateInRange('2024-01-01')) history.unshift(['Условный старт',0,'2024-01-01']);
   const latest = planned.at(-1);
   const actual = latest && occupied.find(point => point[2] === latest[2]);
-  const first = actual && occupied.find(point => point[2] < actual[2]);
-  const delta = first ? actual[1] - first[1] : 0;
-  const tone = delta > 0 ? 'good' : 'bad';
-  const change = delta === 0 ? '' : '<span class="av-team-delta av-kpi-delta av-kpi-delta-' + tone + '">' +
-    safe((delta > 0 ? '+' : '−') + fmt(Math.abs(delta)) + ' занятых ставок') + '</span>';
+  const first = actual && planned.find(point => point[2] < latest[2] && occupied.some(item => item[2] === point[2]));
+  const firstActual = first && occupied.find(point => point[2] === first[2]);
+  const change = firstActual ? [
+    [latest[1] - first[1], 'штатных ставок', false],
+    [actual[1] - firstActual[1], 'занятых ставок', true]
+  ].map(([delta, label, colored]) => {
+    const tone = colored && delta !== 0 ? ' av-kpi-delta-' + (delta > 0 ? 'good' : 'bad') : '';
+    const value = (delta > 0 ? '+' : delta < 0 ? '−' : '') + fmt(Math.abs(delta));
+    return '<span class="av-team-delta av-kpi-delta' + tone + '" title="' + safe(first[0] + ' → ' + latest[0]) + '">' +
+      safe(value + ' ' + label) + '</span>';
+  }).join('') : '';
   return summaryCard({id:'team-history', icon:'people', label:'Команда', route:'people', unit:'ставки',
     points:[...history,...planned], secondary:occupied, options:{branch:true}, change,
     value:actual ? fmt(latest[1]) + ' / ' + fmt(actual[1]) + ' ставки' : history.length ? fmt(history.at(-1)[1]) + ' чел.' : 'НД',
